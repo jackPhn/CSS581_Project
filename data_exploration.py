@@ -1,8 +1,13 @@
 import numpy as np
 import pandas as pd
-import seaborn as sns
 from tabulate import tabulate
 import math
+
+import seaborn as sns
+import nltk
+from nltk import ngrams
+import collections
+
 
 def claim_version_combine(df_claim_v1, df_claim_v2):
     header = ['Id', 'fact_check_url', 'news_url', 'title']
@@ -17,6 +22,7 @@ def claim_version_combine(df_claim_v1, df_claim_v2):
     print(df_claim.shape)
     return df_claim
 
+
 def news_version_combine(df_news_v1, df_news_v2):
     df_news_v1.rename(columns={'Unnamed: 0': 'Id'}, inplace=True)
     df_news_v2.rename(columns={'Unnamed: 0': 'Id'}, inplace=True)
@@ -29,6 +35,7 @@ def news_version_combine(df_news_v1, df_news_v2):
     print(df_news.shape)
     return df_news
 
+
 def tweets_version_combine(df_tweets_v1, df_tweets_v2):
     print(tabulate(df_tweets_v1.head(5), headers='keys', tablefmt='psql'))
     print(df_tweets_v1.shape)
@@ -39,6 +46,7 @@ def tweets_version_combine(df_tweets_v1, df_tweets_v2):
     print(df_tweets.shape)
     return df_tweets
 
+
 def retweets_version_combine(df_retweets_v1, df_retweets_v2):
     print(tabulate(df_retweets_v1.head(5), headers='keys', tablefmt='psql'))
     print(df_retweets_v1.shape)
@@ -48,6 +56,7 @@ def retweets_version_combine(df_retweets_v1, df_retweets_v2):
     print(tabulate(df_retweets.head(5), headers='keys', tablefmt='psql'))
     print(df_retweets.shape)
     return df_retweets
+
 
 def merge_main_content_tweets(main_content, tweets):
     tweets['tweet_count'] = tweets.groupby(['index']).transform('count')
@@ -89,6 +98,7 @@ def claim_preprocess(claim_fake, claim_real):
     print(tabulate(claim.head(5), headers='keys', tablefmt='psql'))
     return claim
 
+
 def news_preprocess(news_fake, news_real):
     news_fake['isfake'] = 1
     news_real['isfake'] = 0
@@ -107,3 +117,36 @@ def news_preprocess(news_fake, news_real):
     print(tabulate(news.head(5), headers='keys', tablefmt='psql'))
     return news
 
+
+def word_frequency(text:str):
+    """
+    Get frequency of individual words in a text corpus
+
+    :param text: text corpus
+    :return: tuples of words and their frequencies
+    """
+    # get individual words
+    tokenized = text.split()
+
+    # count the frequency
+    return collections.Counter(tokenized)
+
+
+def ngram_frequency(text: str, n: int = 2):
+    """
+    Get ngrams frequency in a text corpus
+    
+    :param text: the text of interest
+    :param n: n for ngram. Default = 2
+    :return: list of tuples of ngrams and their frequencies
+    """
+    # get individual words
+    tokenized = text.split()
+
+    # get the list of all the ngrams
+    ngram_list = ngrams(tokenized, n)
+
+    # get the frequency of each ngram in the corpus
+    ngram_freq = collections.Counter(ngram_list)
+
+    return ngram_freq

@@ -10,39 +10,42 @@ from data_exploration import (
     merge_main_content_tweets,
     merge_main_content_retweets,
     claim_preprocess,
-    news_preprocess
+    news_preprocess,
+    ngram_frequency,
+    word_frequency
 )
+from tabulate import tabulate
 
 
 def main():
 
     #Claim dataframe
-    df_claim_fake_v1 = pd.read_csv("CoAID\\05-01-2020\ClaimFakeCOVID-19.csv")
-    df_claim_fake_v2 = pd.read_csv("CoAID\\07-01-2020\ClaimFakeCOVID-19.csv")
-    df_claim_real_v1 = pd.read_csv("CoAID\\05-01-2020\ClaimRealCOVID-19.csv")
-    df_claim_real_v2 = pd.read_csv("CoAID\\07-01-2020\ClaimRealCOVID-19.csv")
+    df_claim_fake_v1 = pd.read_csv("CoAID/05-01-2020/ClaimFakeCOVID-19.csv")
+    df_claim_fake_v2 = pd.read_csv("CoAID/07-01-2020/ClaimFakeCOVID-19.csv")
+    df_claim_real_v1 = pd.read_csv("CoAID/05-01-2020/ClaimRealCOVID-19.csv")
+    df_claim_real_v2 = pd.read_csv("CoAID/07-01-2020/ClaimRealCOVID-19.csv")
 
     df_claim_fake = claim_version_combine(df_claim_fake_v1, df_claim_fake_v2)
     df_claim_real = claim_version_combine(df_claim_real_v1, df_claim_real_v2)
 
     #news dataframe
-    df_news_fake_v1 = pd.read_csv("CoAID\\05-01-2020\\NewsFakeCOVID-19.csv")
-    df_news_fake_v2 = pd.read_csv("CoAID\\07-01-2020\\NewsFakeCOVID-19.csv")
-    df_news_real_v1 = pd.read_csv("CoAID\\05-01-2020\\NewsRealCOVID-19.csv")
-    df_news_real_v2 = pd.read_csv("CoAID\\07-01-2020\\NewsRealCOVID-19.csv")
+    df_news_fake_v1 = pd.read_csv("CoAID/05-01-2020/NewsFakeCOVID-19.csv")
+    df_news_fake_v2 = pd.read_csv("CoAID/07-01-2020/NewsFakeCOVID-19.csv")
+    df_news_real_v1 = pd.read_csv("CoAID/05-01-2020/NewsRealCOVID-19.csv")
+    df_news_real_v2 = pd.read_csv("CoAID/07-01-2020/NewsRealCOVID-19.csv")
 
     df_news_fake = news_version_combine(df_news_fake_v1, df_news_fake_v2)
     df_news_real = news_version_combine(df_news_real_v1, df_news_real_v2)
 
     #claim tweets
-    df_claim_fake_tweets_v1 = pd.read_csv("CoAID\\05-01-2020\ClaimFakeCOVID-19_tweets.csv")
-    df_claim_fake_tweets_v2 = pd.read_csv("CoAID\\07-01-2020\ClaimFakeCOVID-19_tweets.csv")
-    df_claim_fake_tweets_replies_v1 = pd.read_csv("CoAID\\05-01-2020\ClaimFakeCOVID-19_tweets_replies.csv")
-    df_claim_fake_tweets_replies_v2 = pd.read_csv("CoAID\\07-01-2020\ClaimFakeCOVID-19_tweets_replies.csv")
-    df_claim_real_tweets_v1 = pd.read_csv("CoAID\\05-01-2020\ClaimRealCOVID-19_tweets.csv")
-    df_claim_real_tweets_v2 = pd.read_csv("CoAID\\07-01-2020\ClaimRealCOVID-19_tweets.csv")
-    df_claim_real_tweets_replies_v1 = pd.read_csv("CoAID\\05-01-2020\ClaimRealCOVID-19_tweets_replies.csv")
-    df_claim_real_tweets_replies_v2 = pd.read_csv("CoAID\\07-01-2020\ClaimRealCOVID-19_tweets_replies.csv")
+    df_claim_fake_tweets_v1 = pd.read_csv("CoAID/05-01-2020/ClaimFakeCOVID-19_tweets.csv")
+    df_claim_fake_tweets_v2 = pd.read_csv("CoAID/07-01-2020/ClaimFakeCOVID-19_tweets.csv")
+    df_claim_fake_tweets_replies_v1 = pd.read_csv("CoAID/05-01-2020/ClaimFakeCOVID-19_tweets_replies.csv")
+    df_claim_fake_tweets_replies_v2 = pd.read_csv("CoAID/07-01-2020/ClaimFakeCOVID-19_tweets_replies.csv")
+    df_claim_real_tweets_v1 = pd.read_csv("CoAID/05-01-2020/ClaimRealCOVID-19_tweets.csv")
+    df_claim_real_tweets_v2 = pd.read_csv("CoAID/07-01-2020/ClaimRealCOVID-19_tweets.csv")
+    df_claim_real_tweets_replies_v1 = pd.read_csv("CoAID/05-01-2020/ClaimRealCOVID-19_tweets_replies.csv")
+    df_claim_real_tweets_replies_v2 = pd.read_csv("CoAID/07-01-2020/ClaimRealCOVID-19_tweets_replies.csv")
 
     df_claim_fake_tweets = tweets_version_combine(df_claim_fake_tweets_v1, df_claim_fake_tweets_v2)
     df_claim_real_tweets = tweets_version_combine(df_claim_real_tweets_v1, df_claim_real_tweets_v2)
@@ -50,14 +53,14 @@ def main():
     df_claim_real_tweets_replies = retweets_version_combine(df_claim_real_tweets_replies_v1, df_claim_real_tweets_replies_v2)
 
     #news tweets
-    df_news_fake_tweets_v1 = pd.read_csv("CoAID\\05-01-2020\\NewsFakeCOVID-19_tweets.csv")
-    df_news_fake_tweets_v2 = pd.read_csv("CoAID\\07-01-2020\\NewsFakeCOVID-19_tweets.csv")
-    df_news_fake_tweets_replies_v1 = pd.read_csv("CoAID\\05-01-2020\\NewsFakeCOVID-19_tweets_replies.csv")
-    df_news_fake_tweets_replies_v2 = pd.read_csv("CoAID\\07-01-2020\\NewsFakeCOVID-19_tweets_replies.csv")
-    df_news_real_tweets_v1 = pd.read_csv("CoAID\\05-01-2020\\NewsRealCOVID-19_tweets.csv")
-    df_news_real_tweets_v2 = pd.read_csv("CoAID\\07-01-2020\\NewsRealCOVID-19_tweets.csv")
-    df_news_real_tweets_replies_v1 = pd.read_csv("CoAID\\05-01-2020\\NewsRealCOVID-19_tweets_replies.csv")
-    df_news_real_tweets_replies_v2 = pd.read_csv("CoAID\\07-01-2020\\NewsRealCOVID-19_tweets_replies.csv")
+    df_news_fake_tweets_v1 = pd.read_csv("CoAID/05-01-2020/NewsFakeCOVID-19_tweets.csv")
+    df_news_fake_tweets_v2 = pd.read_csv("CoAID/07-01-2020/NewsFakeCOVID-19_tweets.csv")
+    df_news_fake_tweets_replies_v1 = pd.read_csv("CoAID/05-01-2020/NewsFakeCOVID-19_tweets_replies.csv")
+    df_news_fake_tweets_replies_v2 = pd.read_csv("CoAID/07-01-2020/NewsFakeCOVID-19_tweets_replies.csv")
+    df_news_real_tweets_v1 = pd.read_csv("CoAID/05-01-2020/NewsRealCOVID-19_tweets.csv")
+    df_news_real_tweets_v2 = pd.read_csv("CoAID/07-01-2020/NewsRealCOVID-19_tweets.csv")
+    df_news_real_tweets_replies_v1 = pd.read_csv("CoAID/05-01-2020/NewsRealCOVID-19_tweets_replies.csv")
+    df_news_real_tweets_replies_v2 = pd.read_csv("CoAID/07-01-2020/NewsRealCOVID-19_tweets_replies.csv")
 
     df_news_fake_tweets = tweets_version_combine(df_news_fake_tweets_v1, df_news_fake_tweets_v2)
     df_news_real_tweets = tweets_version_combine(df_news_real_tweets_v1, df_news_real_tweets_v2)
@@ -80,6 +83,14 @@ def main():
     df_claim = claim_preprocess(df_claim_fake_merged, df_claim_real_merged)
     df_news = news_preprocess(df_news_fake_merged, df_news_real_merged)
 
+    # example for word frequency
+    example_text = df_news_real.iloc[0, 6]
+    print(word_frequency(example_text))
+
+    # example for ngrams
+    print(example_text)
+    ngrams_fred = ngram_frequency(example_text, 2)
+    print(ngrams_fred)
 
 
 # Press the green button in the gutter to run the script.
