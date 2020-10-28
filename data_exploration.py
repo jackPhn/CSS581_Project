@@ -123,22 +123,25 @@ def word_frequency(text:str):
     Get frequency of individual words in a text corpus
 
     :param text: text corpus
-    :return: tuples of words and their frequencies
+    :return: Counter object of tuples of words and their frequencies
     """
     # get individual words
     tokenized = text.split()
 
     # count the frequency
-    return collections.Counter(tokenized)
+    word_counter = collections.Counter(tokenized)
+    #frequencies = list(collections.Counter(tokenized).items())
+
+    return word_counter
 
 
 def ngram_frequency(text: str, n: int = 2):
     """
     Get ngrams frequency in a text corpus
-    
+
     :param text: the text of interest
     :param n: n for ngram. Default = 2
-    :return: list of tuples of ngrams and their frequencies
+    :return: Counter object of tuples of ngrams and their frequencies
     """
     # get individual words
     tokenized = text.split()
@@ -147,6 +150,6 @@ def ngram_frequency(text: str, n: int = 2):
     ngram_list = ngrams(tokenized, n)
 
     # get the frequency of each ngram in the corpus
-    ngram_freq = collections.Counter(ngram_list)
+    ngram_counter = collections.Counter(ngram_list)
 
-    return ngram_freq
+    return ngram_counter
