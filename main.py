@@ -1,6 +1,10 @@
 import numpy as np
 import pandas as pd
-import seaborn as sns
+
+from data_compilation import (
+    build_real_news_dataframe,
+    build_fake_news_dataframe
+)
 
 from data_exploration import (
     claim_version_combine,
@@ -14,11 +18,49 @@ from data_exploration import (
     ngram_frequency,
     word_frequency
 )
-from tabulate import tabulate
 
 
 def main():
 
+    real_news_df = build_real_news_dataframe(include_celeb=True)
+    fake_news_df = build_fake_news_dataframe(include_celeb=True)
+
+    # concatenate all contents of real news
+    real_news_contents = np.array(real_news_df['Content'].tolist())
+    real_news_joined = " ".join(real_news_contents)
+
+    # Find ngrams
+    real_news_ngram_fred = ngram_frequency(real_news_joined, 4)
+    print('\n')
+    print("Frequency of the 20 most common ngrams in real news:")
+    print(real_news_ngram_fred.most_common(20))
+    print('\n')
+
+    # find frequencies of words
+    real_news_word_fred = word_frequency(real_news_joined)
+    print("Frequency of the 20 most common words in real news:")
+    print(real_news_word_fred.most_common(20))
+
+    # --------------------------------------------------------------------
+    # concatenate all contents of fake news
+    fake_news_contents = np.array(fake_news_df['Content'].tolist())
+    fake_news_joined = " ".join(fake_news_contents)
+
+    # Find ngrams
+    fake_news_ngram_fred = ngram_frequency(fake_news_joined, 3)
+    print('\n')
+    print("Frequency of the 20 most common ngrams in fake news:")
+    print(fake_news_ngram_fred.most_common(20))
+    print('\n')
+
+    # find frequencies of words
+    fake_news_word_fred = word_frequency(fake_news_joined)
+    print("Frequency of the 20 most common words in fake news:")
+    print(fake_news_word_fred.most_common(20))
+    print('\n')
+
+
+    """
     #Claim dataframe
     df_claim_fake_v1 = pd.read_csv("CoAID/05-01-2020/ClaimFakeCOVID-19.csv")
     df_claim_fake_v2 = pd.read_csv("CoAID/07-01-2020/ClaimFakeCOVID-19.csv")
@@ -82,7 +124,7 @@ def main():
     # mergin and processing claim and news main content
     df_claim = claim_preprocess(df_claim_fake_merged, df_claim_real_merged)
     df_news = news_preprocess(df_news_fake_merged, df_news_real_merged)
-
+    
     #-------------------------------------------------------------------
     # concatenate all contents of real news
     real_news_contents = np.array(df_news_real['content'].tolist())
@@ -121,7 +163,7 @@ def main():
     print("Frequency of the 20 most common words in fake news:")
     print(fake_news_word_fred.most_common(20))
     print('\n')
-
+    """
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':

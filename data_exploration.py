@@ -118,7 +118,7 @@ def news_preprocess(news_fake, news_real):
     return news
 
 
-def word_frequency(text:str):
+def word_frequency(text: str):
     """
     Get frequency of individual words in a text corpus
 
