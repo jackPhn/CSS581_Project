@@ -19,6 +19,9 @@ from data_exploration import (
     word_frequency
 )
 
+from model_building import (
+    decision_tree_model
+)
 
 def main():
 
@@ -30,7 +33,7 @@ def main():
     real_news_joined = " ".join(real_news_contents)
 
     # Find ngrams
-    real_news_ngram_fred = ngram_frequency(real_news_joined, 4)
+    real_news_ngram_fred = ngram_frequency(real_news_joined, 3)
     print('\n')
     print("Frequency of the 20 most common ngrams in real news:")
     print(real_news_ngram_fred.most_common(20))
@@ -58,6 +61,14 @@ def main():
     print("Frequency of the 20 most common words in fake news:")
     print(fake_news_word_fred.most_common(20))
     print('\n')
+
+    #----------------------------------------------------------------------
+    # Try building a simple model
+    # combine the real and fake news into one data frame
+    # shuffle the dataset
+    news_df = pd.concat([real_news_df, fake_news_df]).sample(frac=1, random_state=1).reset_index(drop=True)
+    decision_tree_model(news_df)
+
 
 
     """
