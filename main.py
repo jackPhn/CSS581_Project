@@ -20,7 +20,8 @@ from data_exploration import (
 )
 
 from model_building import (
-    decision_tree_model
+    decision_tree_model,
+    make_prediction
 )
 
 def main():
@@ -67,8 +68,11 @@ def main():
     # combine the real and fake news into one data frame
     # shuffle the dataset
     news_df = pd.concat([real_news_df, fake_news_df]).sample(frac=1, random_state=1).reset_index(drop=True)
-    decision_tree_model(news_df)
+    pack = decision_tree_model(news_df)
 
+    # make a prediction
+    # change the file path below to the absolute file path of a sample
+    make_prediction(pack, "/Users/jack/programming/machine_learning/CSS581_Project_Repo/CSS581_Project/fakeNewsDatasets/fakeNewsDataset/legit/biz14.legit.txt")
 
 
     """
