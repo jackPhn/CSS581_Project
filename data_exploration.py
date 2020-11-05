@@ -8,7 +8,7 @@ import nltk
 from nltk import ngrams
 import collections
 
-
+'''
 def claim_version_combine(df_claim_v1, df_claim_v2):
     header = ['Id', 'fact_check_url', 'news_url', 'title']
     df_claim_v1.columns = header
@@ -116,7 +116,7 @@ def news_preprocess(news_fake, news_real):
     news['retweet_count'] = news['retweet_count'].apply(lambda x: 0 if math.isnan(x) else x)
     print(tabulate(news.head(5), headers='keys', tablefmt='psql'))
     return news
-
+'''
 
 def word_frequency(text: str):
     """
