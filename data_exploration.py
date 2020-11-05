@@ -8,6 +8,26 @@ import nltk
 from nltk import ngrams
 import collections
 
+def validate_null_value(news_df):
+
+    print(tabulate(news_df.head(5), headers='keys', tablefmt='psql'))
+    print(news_df.shape)
+
+    # check for a column with any null value
+    print("List the count of null values for each column")
+    sum_null_value = news_df.isnull().sum()
+    print(sum_null_value)
+
+    # validate if there is any null value
+    bool = news_df.isnull().values.any()
+    print("Is there any null value? " + str(bool))
+
+    # check for data type
+    print("Display data type of all columns")
+    print(news_df.dtypes)
+    print(news_df.info)
+
+
 '''
 def claim_version_combine(df_claim_v1, df_claim_v2):
     header = ['Id', 'fact_check_url', 'news_url', 'title']
@@ -117,6 +137,7 @@ def news_preprocess(news_fake, news_real):
     print(tabulate(news.head(5), headers='keys', tablefmt='psql'))
     return news
 '''
+
 
 def word_frequency(text: str):
     """

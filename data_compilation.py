@@ -35,12 +35,9 @@ def get_dataset_from_file(dataset: str, is_fake: bool):
 
     newsDf = pd.DataFrame({'Title': titles, 'Content': contents})
     if is_fake:
-        newsDf['Is fake'] = 1
+        newsDf['is_fake'] = 1
     else:
-        newsDf['Is fake'] = 0
-
-    print(tabulate(newsDf.head(5), headers='keys', tablefmt='psql'))
-    print(newsDf.shape)
+        newsDf['is_fake'] = 0
 
     return newsDf
 
@@ -52,14 +49,17 @@ def build_real_news_dataframe(include_celeb: bool = False):
     :return: the real news data frame
     """
     # real news dataset
-    column_names = ['Title', 'Content', 'Is fake']
+    # I removed is_fake because the data type becomes objoct
+    column_names = ['Title', 'Content']
     realDf = pd.DataFrame(columns=column_names)
 
     # build the dataframe with the non-celeb news
     realDf = realDf.append(get_dataset_from_file("fakeNewsDataset", False), ignore_index=True)
+    realDf['is_news'] = 1
 
     if include_celeb:
         realDf = realDf.append(get_dataset_from_file("celebrityDataset", False), ignore_index=True)
+        realDf['is_news'] = 0
 
     return realDf
 
@@ -71,13 +71,19 @@ def build_fake_news_dataframe(include_celeb: bool = False):
     :return: the fake news data frame
     """
     # fake new dataset
-    column_names = ['Title', 'Content', 'Is fake']
-    fakeDf = pd.DataFrame(columns=column_names)
+    column_names = ['Title', 'Content']
+    fakeDf = pd.DataFrame()
 
     # build the data frame with the non-celeb news
     fakeDf = fakeDf.append(get_dataset_from_file("fakeNewsDataset", True), ignore_index=True)
-
+    fakeDf['is_news'] = 1
     if include_celeb:
         fakeDf = fakeDf.append(get_dataset_from_file("celebrityDataset", True), ignore_index=True)
+        fakeDf['is_news'] = 0
 
     return fakeDf
+
+
+def concatenet_dataframes(real_news_df, fake_news_df):
+    news_df = pd.concat([real_news_df, fake_news_df])
+    return news_df

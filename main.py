@@ -3,7 +3,8 @@ import pandas as pd
 
 from data_compilation import (
     build_real_news_dataframe,
-    build_fake_news_dataframe
+    build_fake_news_dataframe,
+    concatenet_dataframes
 )
 
 from data_exploration import (
@@ -15,6 +16,7 @@ from data_exploration import (
     # merge_main_content_retweets,
     # claim_preprocess,
     # news_preprocess,
+    validate_null_value,
     ngram_frequency,
     word_frequency
 )
@@ -25,10 +27,13 @@ from model_building import (
 )
 
 def main():
-
+    #data loading
     real_news_df = build_real_news_dataframe(include_celeb=True)
     fake_news_df = build_fake_news_dataframe(include_celeb=True)
+    news_df = concatenet_dataframes(real_news_df, fake_news_df)
 
+    # data exploration
+    validate_null_value(news_df)
     # concatenate all contents of real news
     real_news_contents = np.array(real_news_df['Content'].tolist())
     real_news_joined = " ".join(real_news_contents)
