@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+from tabulate import tabulate
 
 
 def get_dataset_from_file(dataset: str, is_fake: bool):
@@ -22,7 +23,7 @@ def get_dataset_from_file(dataset: str, is_fake: bool):
 
     for filename in os.listdir(fakeCelebDir):
 
-        with open(os.path.join(fakeCelebDir, filename), 'r') as file:
+        with open(os.path.join(fakeCelebDir, filename), 'r', encoding='UTF8') as file:
             # read and store the title
             title = file.readline()
             titles.append(title)
@@ -37,6 +38,9 @@ def get_dataset_from_file(dataset: str, is_fake: bool):
         newsDf['Is fake'] = 1
     else:
         newsDf['Is fake'] = 0
+
+    print(tabulate(newsDf.head(5), headers='keys', tablefmt='psql'))
+    print(newsDf.shape)
 
     return newsDf
 

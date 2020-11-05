@@ -7,14 +7,14 @@ from data_compilation import (
 )
 
 from data_exploration import (
-    claim_version_combine,
-    news_version_combine,
-    tweets_version_combine,
-    retweets_version_combine,
-    merge_main_content_tweets,
-    merge_main_content_retweets,
-    claim_preprocess,
-    news_preprocess,
+    # claim_version_combine,
+    # news_version_combine,
+    # tweets_version_combine,
+    # retweets_version_combine,
+    # merge_main_content_tweets,
+    # merge_main_content_retweets,
+    # claim_preprocess,
+    # news_preprocess,
     ngram_frequency,
     word_frequency
 )
