@@ -32,8 +32,9 @@ def main():
     fake_news_df = build_fake_news_dataframe(include_celeb=True)
     news_df = concatenet_dataframes(real_news_df, fake_news_df)
 
-    # data exploration
+    # find missing values
     validate_null_value(news_df)
+
     # concatenate all contents of real news
     real_news_contents = np.array(real_news_df['Content'].tolist())
     real_news_joined = " ".join(real_news_contents)
