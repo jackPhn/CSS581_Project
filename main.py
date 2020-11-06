@@ -17,6 +17,7 @@ from data_exploration import (
     # claim_preprocess,
     # news_preprocess,
     validate_null_value,
+    validate_unique_recored,
     ngram_frequency,
     word_frequency
 )
@@ -26,14 +27,22 @@ from model_building import (
     make_prediction
 )
 
+from data_visualization import (
+    visualize_real_feak,
+    visualize_news_celebrity
+)
+
+
 def main():
-    #data loading
+    # data loading
     real_news_df = build_real_news_dataframe(include_celeb=True)
     fake_news_df = build_fake_news_dataframe(include_celeb=True)
     news_df = concatenet_dataframes(real_news_df, fake_news_df)
 
     # data exploration
     validate_null_value(news_df)
+    validate_unique_recored(news_df)
+
     # concatenate all contents of real news
     real_news_contents = np.array(real_news_df['Content'].tolist())
     real_news_joined = " ".join(real_news_contents)
@@ -68,7 +77,12 @@ def main():
     print(fake_news_word_fred.most_common(20))
     print('\n')
 
-    #----------------------------------------------------------------------
+    # ----------------------------------------------------------------------
+    # Visualization
+    visualize_real_feak(news_df)
+    visualize_news_celebrity(news_df)
+
+    # ----------------------------------------------------------------------
     # Try building a simple model
     # combine the real and fake news into one data frame
     # shuffle the dataset
@@ -77,8 +91,8 @@ def main():
 
     # make a prediction
     # change the file path below to the absolute file path of a sample
-    make_prediction(pack, "/Users/jack/programming/machine_learning/CSS581_Project_Repo/CSS581_Project/fakeNewsDatasets/fakeNewsDataset/legit/biz14.legit.txt")
-
+    make_prediction(pack,
+                    "/Users/jack/programming/machine_learning/CSS581_Project_Repo/CSS581_Project/fakeNewsDatasets/fakeNewsDataset/legit/biz14.legit.txt")
 
     """
     #Claim dataframe
@@ -144,7 +158,7 @@ def main():
     # mergin and processing claim and news main content
     df_claim = claim_preprocess(df_claim_fake_merged, df_claim_real_merged)
     df_news = news_preprocess(df_news_fake_merged, df_news_real_merged)
-    
+
     #-------------------------------------------------------------------
     # concatenate all contents of real news
     real_news_contents = np.array(df_news_real['content'].tolist())
@@ -184,6 +198,7 @@ def main():
     print(fake_news_word_fred.most_common(20))
     print('\n')
     """
+
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':

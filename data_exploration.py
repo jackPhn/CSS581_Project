@@ -27,6 +27,16 @@ def validate_null_value(news_df):
     print(news_df.dtypes)
     print(news_df.info)
 
+def validate_unique_recored(news_df):
+    # Find the unique value of is_fake column
+    print("Display the unique Values of is_fake")
+    print(news_df.is_fake.unique())
+
+    # Find the unique value of is_news column
+    print("Display the unique Values of is_news")
+    print(news_df.is_news.unique())
+
+
 
 '''
 def claim_version_combine(df_claim_v1, df_claim_v2):
