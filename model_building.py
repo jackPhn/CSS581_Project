@@ -1,3 +1,4 @@
+import io
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
@@ -79,7 +80,6 @@ def word_embedding(raw_data, vocab_size, max_length, tokenizer=None):
         tokenizer = Tokenizer(num_words=vocab_size, oov_token=oov_tok)
         tokenizer.fit_on_texts(raw_data)
 
-    word_index = tokenizer.word_index
     sequences = tokenizer.texts_to_sequences(raw_data)
     padded = pad_sequences(sequences, maxlen=max_length, padding=padding_type, truncating=trunc_type)
 
@@ -177,9 +177,9 @@ def basic_deep_learning_model(df):
     :param df:
     :return:
     """
-    vocab_size = 100
-    embedding_dim = 16
-    max_length = 100
+    vocab_size = 1200
+    embedding_dim = 32
+    max_length = 200
 
     # extract data
     X = df.iloc[:, :-1].values
@@ -193,7 +193,7 @@ def basic_deep_learning_model(df):
     # build the model
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
-        tf.keras.layers.Flatten(),
+        tf.keras.layers.GlobalAveragePooling1D(),
         tf.keras.layers.Dense(6, activation='relu'),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
@@ -202,7 +202,27 @@ def basic_deep_learning_model(df):
     model.summary()
 
     # train the model
-    num_epoch = 10
+    num_epoch = 40
     model.fit(X_train, Y_train, epochs=num_epoch, validation_data=(X_train, Y_train))
+
+    word_index = tokenizer.word_index
+    reverse_word_index = dict([(value, key) for (key, value) in word_index.items()])
+
+    # get the weights for the embedding layer
+    e = model.layers[0]
+    weights = e.get_weights()[0]
+
+    # write out the embedding vectors and metadata
+    out_v = io.open('vectors.tsv', 'w', encoding='utf-8')
+    out_m = io.open('meta.tsv', 'w', encoding='utf-8')
+    for word_num in range(1, vocab_size):
+        word = reverse_word_index[word_num]
+        embeddings = weights[word_num]
+        out_m.write(word + '\n')
+        out_v.write('\t'.join([str(x) for x in embeddings]) + '\n')
+    out_m.close()
+    out_v.close()
+
+    # To view the visualization, go to https://projector.tensorflow.org
 
     return model

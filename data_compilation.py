@@ -29,7 +29,7 @@ def get_dataset_from_file(dataset: str, is_fake: bool):
             titles.append(title)
 
             # read and store the content
-            content_lines = file.read().splitlines()
+            content_lines = file.read().splitlines()  # remove new-line characters
             content = " ".join(content_lines)
             contents.append(content)
 

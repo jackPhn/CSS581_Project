@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import io
 
 from data_compilation import (
     build_real_news_dataframe,
@@ -27,11 +28,18 @@ from model_building import (
     basic_deep_learning_model
 )
 
+
 def main():
     #data loading
     real_news_df = build_real_news_dataframe(include_celeb=True)
     fake_news_df = build_fake_news_dataframe(include_celeb=True)
     news_df = concatenet_dataframes(real_news_df, fake_news_df)
+
+    # find out the total number of unique words in the corpus
+    news_contents = np.array(news_df['Content'].tolist())
+    news_df_joined = " ".join(news_contents).lower()
+    unique_words = list(word_frequency(news_df_joined).keys())
+    print("The number of unique words in the news contents is:", len(unique_words))
 
     # find missing values
     validate_null_value(news_df)
@@ -45,10 +53,10 @@ def main():
     print('\n')
     print("Frequency of the 20 most common ngrams in real news:")
     print(real_news_ngram_fred.most_common(20))
-    print('\n')
 
     # find frequencies of words
     real_news_word_fred = word_frequency(real_news_joined)
+    print('\n')
     print("Frequency of the 20 most common words in real news:")
     print(real_news_word_fred.most_common(20))
 
@@ -62,10 +70,10 @@ def main():
     print('\n')
     print("Frequency of the 20 most common ngrams in fake news:")
     print(fake_news_ngram_fred.most_common(20))
-    print('\n')
 
     # find frequencies of words
     fake_news_word_fred = word_frequency(fake_news_joined)
+    print('\n')
     print("Frequency of the 20 most common words in fake news:")
     print(fake_news_word_fred.most_common(20))
     print('\n')
@@ -83,7 +91,8 @@ def main():
 
     # ----------------------------------------------------------------------
     # Try deep learning
-    fit = basic_deep_learning_model(news_df)
+    model = basic_deep_learning_model(news_df)
+
 
     """
     #Claim dataframe
@@ -190,8 +199,7 @@ def main():
     print('\n')
     """
 
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     main()
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
