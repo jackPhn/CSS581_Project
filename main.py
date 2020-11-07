@@ -23,7 +23,8 @@ from data_exploration import (
 
 from model_building import (
     decision_tree_model,
-    make_prediction
+    make_prediction,
+    basic_deep_learning_model
 )
 
 def main():
@@ -80,6 +81,9 @@ def main():
     # change the file path below to the absolute file path of a sample
     make_prediction(pack, "/Users/jack/programming/machine_learning/CSS581_Project_Repo/CSS581_Project/fakeNewsDatasets/fakeNewsDataset/legit/biz14.legit.txt")
 
+    # ----------------------------------------------------------------------
+    # Try deep learning
+    fit = basic_deep_learning_model(news_df)
 
     """
     #Claim dataframe

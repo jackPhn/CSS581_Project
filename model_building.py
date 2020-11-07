@@ -34,7 +34,7 @@ def tfdif_transform(raw_data, tfidf_vectorizer=None):
     :return: tf-idf matrix and reference to the tf-idf vectorizer used
     """
     # tf-idf transformer
-    if tfidf_vectorizer == None:
+    if tfidf_vectorizer is None:
         tfidf_vectorizer = TfidfVectorizer(lowercase=True, smooth_idf=True)
         mat = tfidf_vectorizer.fit_transform(raw_data).todense()
     else:
@@ -50,7 +50,7 @@ def ngram_vectorizer(raw_data, cv_ngram=None):
     :param cv_ngram: Scikit-Learn CountVectorizer
     :return: ngram count matrix and the CountVectorizer used
     """
-    if cv_ngram == None:
+    if cv_ngram is None:
         # count vectorizer
         # convert all words to lower case letters
         cv_ngram = CountVectorizer(analyzer='word', ngram_range=(3, 3), lowercase=True)
@@ -62,13 +62,28 @@ def ngram_vectorizer(raw_data, cv_ngram=None):
     return mat, cv_ngram
 
 
-def word_embedding(raw_data):
+def word_embedding(raw_data, vocab_size, max_length, tokenizer=None):
     """
 
     :param raw_data:
+    :param vocab_size:
+    :param max_length:
+    :param tokenizer:
     :return:
     """
-    pass
+    trunc_type = 'post'
+    padding_type = 'post'
+    oov_tok = "<OOV>"
+
+    if tokenizer is None:
+        tokenizer = Tokenizer(num_words=vocab_size, oov_token=oov_tok)
+        tokenizer.fit_on_texts(raw_data)
+
+    word_index = tokenizer.word_index
+    sequences = tokenizer.texts_to_sequences(raw_data)
+    padded = pad_sequences(sequences, maxlen=max_length, padding=padding_type, truncating=trunc_type)
+
+    return padded, tokenizer
 
 
 def decision_tree_model(df):
@@ -94,10 +109,10 @@ def decision_tree_model(df):
     X_mat = np.hstack((mat_title, mat_content, mat_ngram))
 
     # split the dataset
-    X_train, X_test, Y_train, Y_test = train_test_split(X_mat, Y, test_size=0.2, random_state=0)
+    X_train, X_test, Y_train, Y_test = train_test_split(X_mat, Y, test_size=0.2, random_state=0, stratify=Y)
 
     # model
-    model = XGBClassifier()
+    model = GaussianNB()
     fit = model.fit(X_train, Y_train)
 
     # prediction
@@ -154,3 +169,40 @@ def make_prediction(pack, file_path):
         print("This is fake news")
     else:
         print("This is legit news")
+
+
+def basic_deep_learning_model(df):
+    """
+
+    :param df:
+    :return:
+    """
+    vocab_size = 100
+    embedding_dim = 16
+    max_length = 100
+
+    # extract data
+    X = df.iloc[:, :-1].values
+    Y = df.iloc[:, -1].values
+    Y = Y.astype('int')
+
+    X_mat, tokenizer = word_embedding(raw_data=X[:, 1], vocab_size=vocab_size, max_length=max_length)
+    # split the dataset
+    X_train, X_test, Y_train, Y_test = train_test_split(X_mat, Y, test_size=0.2, random_state=0, stratify=Y)
+
+    # build the model
+    model = tf.keras.Sequential([
+        tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
+        tf.keras.layers.Flatten(),
+        tf.keras.layers.Dense(6, activation='relu'),
+        tf.keras.layers.Dense(1, activation='sigmoid')
+    ])
+
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    model.summary()
+
+    # train the model
+    num_epoch = 10
+    model.fit(X_train, Y_train, epochs=num_epoch, validation_data=(X_train, Y_train))
+
+    return model
