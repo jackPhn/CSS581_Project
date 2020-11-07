@@ -1,13 +1,9 @@
 import numpy as np
-import pandas as pd
-import io
-
 from data_compilation import (
     build_real_news_dataframe,
     build_fake_news_dataframe,
     concatenet_dataframes
 )
-
 from data_exploration import (
     # claim_version_combine,
     # news_version_combine,
@@ -21,9 +17,8 @@ from data_exploration import (
     ngram_frequency,
     word_frequency
 )
-
 from model_building import (
-    decision_tree_model,
+    classical_model,
     make_prediction,
     basic_deep_learning_model
 )
@@ -35,11 +30,18 @@ def main():
     fake_news_df = build_fake_news_dataframe(include_celeb=True)
     news_df = concatenet_dataframes(real_news_df, fake_news_df)
 
+    # find the longest news content
+    news_length = [len(news) for news in news_df['Content'].tolist()]
+    print("The number of words in the longest piece of news is:", np.max(news_length))
+    print()
+
+
     # find out the total number of unique words in the corpus
     news_contents = np.array(news_df['Content'].tolist())
     news_df_joined = " ".join(news_contents).lower()
     unique_words = list(word_frequency(news_df_joined).keys())
     print("The number of unique words in the news contents is:", len(unique_words))
+    print()
 
     # find missing values
     validate_null_value(news_df)
@@ -50,13 +52,13 @@ def main():
 
     # Find ngrams
     real_news_ngram_fred = ngram_frequency(real_news_joined, 3)
-    print('\n')
+    print()
     print("Frequency of the 20 most common ngrams in real news:")
     print(real_news_ngram_fred.most_common(20))
 
     # find frequencies of words
     real_news_word_fred = word_frequency(real_news_joined)
-    print('\n')
+    print()
     print("Frequency of the 20 most common words in real news:")
     print(real_news_word_fred.most_common(20))
 
@@ -67,23 +69,22 @@ def main():
 
     # Find ngrams
     fake_news_ngram_fred = ngram_frequency(fake_news_joined, 3)
-    print('\n')
+    print()
     print("Frequency of the 20 most common ngrams in fake news:")
     print(fake_news_ngram_fred.most_common(20))
 
     # find frequencies of words
     fake_news_word_fred = word_frequency(fake_news_joined)
-    print('\n')
+    print()
     print("Frequency of the 20 most common words in fake news:")
     print(fake_news_word_fred.most_common(20))
-    print('\n')
+    print()
 
     #----------------------------------------------------------------------
     # Try building a simple model
-    # combine the real and fake news into one data frame
     # shuffle the dataset
-    news_df = pd.concat([real_news_df, fake_news_df]).sample(frac=1, random_state=1).reset_index(drop=True)
-    pack = decision_tree_model(news_df)
+    news_df = news_df.sample(frac=1, random_state=1).reset_index(drop=True)
+    pack = classical_model(news_df)
 
     # make a prediction
     # change the file path below to the absolute file path of a sample
