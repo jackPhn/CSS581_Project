@@ -18,7 +18,7 @@ from data_exploration import (
     word_frequency
 )
 from model_building import (
-    classical_model,
+    classical_models,
     make_prediction,
     basic_deep_learning_model
 )
@@ -84,11 +84,11 @@ def main():
     # Try building a simple model
     # shuffle the dataset
     news_df = news_df.sample(frac=1, random_state=1).reset_index(drop=True)
-    pack = classical_model(news_df)
+    pack = classical_models(news_df)
 
     # make a prediction
     # change the file path below to the absolute file path of a sample
-    make_prediction(pack, "/Users/jack/programming/machine_learning/CSS581_Project_Repo/CSS581_Project/fakeNewsDatasets/fakeNewsDataset/legit/biz14.legit.txt")
+    #make_prediction(pack, "/Users/jack/programming/machine_learning/CSS581_Project_Repo/CSS581_Project/fakeNewsDatasets/fakeNewsDataset/legit/biz14.legit.txt")
 
     # ----------------------------------------------------------------------
     # Try deep learning

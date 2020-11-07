@@ -28,10 +28,6 @@ from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 
-vocab_size = 19884
-embedding_dim = 32
-max_length = 200
-
 def tfdif_transform(raw_data, tfidf_vectorizer=None):
     """
     Helper function to convert raw data of text into tf-idf matrix
@@ -68,8 +64,34 @@ def ngram_vectorize(raw_data, cv_ngram=None):
     return mat, cv_ngram
 
 
+def feature_extract(X):
+    """
+    Extract features from news titles and contents
+    :param df: two-column matrix of features (Title and Content)
+    :return: feature matrix and feature extracting transformers
+    """
+    # Convert the titles to Tf-iDF matrix
+    mat_title, tfidf_title = tfdif_transform(X[:, 0])
+
+    # Convert the contents to Tf-iDF matrix
+    mat_content, tfidf_content = tfdif_transform(X[:, 1])
+
+    # count ngrams in the contents
+    mat_ngram, cv_ngram = ngram_vectorize(X[:, 1])
+
+    X_mat = np.hstack((mat_title, mat_content, mat_ngram))
+
+    return {
+        "cv_ngram": cv_ngram,
+        "tfidf_content": tfidf_content,
+        "tfidf_title": tfidf_title,
+        "features": X_mat
+    }
+
+
 def word_embedding(raw_data, vocab_size, max_length, tokenizer=None):
     """
+
     :param raw_data:
     :param vocab_size:
     :param max_length:
@@ -90,44 +112,33 @@ def word_embedding(raw_data, vocab_size, max_length, tokenizer=None):
     return padded, tokenizer
 
 
-def feature_extract(X):
+def evaluate(fit, X_test, Y_test):
     """
-
-    :param df: two-column matrix of features (Title and Content)
-    :return:
+    Evaluate a trained model for accuracy, precision, recall, f_score, and auc
+    :param fit: trained model
+    :param X_test: test features
+    :param Y_test: test labels
+    :return: a dictionary of metrics
     """
-    # extract data
-    #X = df.iloc[:, :-1].values
-    #Y = df.iloc[:, -1].values
-    #Y = Y.astype('int')
-
-    # Convert the titles to Tf-iDF matrix
-    mat_title, tfidf_title = tfdif_transform(X[:, 0])
-
-    # Convert the contents to Tf-iDF matrix
-    mat_content, tfidf_content = tfdif_transform(X[:, 1])
-
-    # count ngrams in the contents
-    mat_ngram, cv_ngram = ngram_vectorize(X[:, 1])
-
-    X_mat = np.hstack((mat_title, mat_content, mat_ngram))
+    pred = np.array(fit.predict(X_test))
+    pred_proba = np.array(fit.predict_proba(X_test))
 
     return {
-        "cv_ngram": cv_ngram,
-        "tfidf_content": tfidf_content,
-        "tfidf_title": tfidf_title,
-        "features": X_mat
-        #"labels": Y
+        "accuracy": accuracy_score(Y_test, pred),
+        "precision": precision_score(Y_test, pred),
+        "recall": recall_score(Y_test, pred),
+        "f_score": f1_score(Y_test, pred),
+        "auc": roc_auc_score(np.array(Y_test), pred_proba[:, 1])
     }
 
 
 def cross_validate(model, features, labels):
     """
-
-    :param model:
-    :param features:
-    :param labels:
-    :return:
+    Perform k fold cross validation
+    :param model: untrained model
+    :param features: feature matrix
+    :param labels: label vector
+    :return: a data frame of cross validation metrics
     """
     # Stratified 10-fold
     k = 10
@@ -150,15 +161,14 @@ def cross_validate(model, features, labels):
         # train the model
         fit = model.fit(X_train, Y_train)
 
-        # predictions
-        pred = np.array(fit.predict(X_test))
-        pred_proba = np.array(fit.predict_proba(X_test))
+        # evaluate the model
+        metrics = evaluate(fit, X_test, Y_test)
 
-        accuracy += accuracy_score(Y_test, pred)
-        precision += precision_score(Y_test, pred)
-        recall += recall_score(Y_test, pred)
-        f_score += f1_score(Y_test, pred)
-        auc += roc_auc_score(np.array(Y_test), pred_proba[:, 1])
+        accuracy += metrics['accuracy']
+        precision += metrics['precision']
+        recall += metrics['recall']
+        f_score += metrics['f_score']
+        auc += metrics['auc']
 
     # average and pack the results into a data frame
     values = {
@@ -169,11 +179,11 @@ def cross_validate(model, features, labels):
     return metrics_df
 
 
-def classical_model(df):
+def classical_models(df):
     """
-
+    Build classical models and perform cross validation and evaluate the performance on test set
     :param df: datafram of raw data
-    :return:
+    :return: a dictionary of the trained models and features extracting transformers
     """
     # get the labels
     labels = df.iloc[:, -1].values
@@ -187,18 +197,83 @@ def classical_model(df):
     X_train, X_test, Y_train, Y_test = train_test_split(features, labels, test_size=0.2, random_state=0, stratify=labels)
 
     # model
-    model = GaussianNB()
+    models = {
+        "Logistic Regression": LogisticRegression(),
+        "Decision Tree": DecisionTreeClassifier(),
+        "Gaussian NB": GaussianNB(),
+        "XGBoost": XGBClassifier()
+    }
 
-    # kfold cross validation
-    metrics_df = cross_validate(model, X_train, Y_train)
+    # create a data frame to store validation metrics and test metrics
+    metrics = {"Metrics": ['Accuracy', 'Precision', 'Recall', 'F1-Score', 'AUC']}
+    validation_metrics_df = pd.DataFrame.from_dict(metrics)
+    test_metrics_df = pd.DataFrame.from_dict(metrics)
+
+    # dictionary for storing weights
+    trained_models = dict()
+
+    for name, model in models.items():
+        # k-fold cross validation
+        metrics_df = cross_validate(model, X_train, Y_train)
+        validation_metrics_df[name] = metrics_df["Value"]
+
+        # train the model
+        fit = model.fit(X_train, Y_train)
+        trained_models[name] = fit
+
+        # evaluate the model on the test set
+        test_metrics = evaluate(fit, X_test, Y_test)
+        # pack the results into a data frame
+        values = {
+            "Value": [test_metrics['accuracy'],
+                      test_metrics['precision'],
+                      test_metrics['recall'],
+                      test_metrics['f_score'],
+                      test_metrics['auc']]
+        }
+        test_metrics = pd.DataFrame.from_dict(values)
+        test_metrics_df[name] = test_metrics["Value"]
+
+    # display the results
     print("Cross validation results:")
-    print(metrics_df)
+    print(validation_metrics_df)
+    print()
+
+    print("Test set's evaluation results:")
+    print(test_metrics_df)
+
+    # Write the results to .csv files
+    validation_metrics_df.to_csv('validation_results.csv')
+    test_metrics_df.to_csv('test_results.csv')
+
+    """
+    # kfold cross validation
+    validation_metrics_df = cross_validate(model, X_train, Y_train)
+    print("Cross validation results:")
+    print(validation_metrics_df)
 
     # train the model
     fit = model.fit(X_train, Y_train)
 
+    # evaluate the model on the test set
+    test_metrics = evaluate(fit, X_test, Y_test)
+
+    # pack the results into a data frame
+    values = {
+        "Metric": ["Accuracy", "Precision", "Recall", "F1-Score", "AUC"],
+        "Value": [test_metrics['accuracy'],
+                  test_metrics['precision'],
+                  test_metrics['recall'],
+                  test_metrics['f_score'],
+                  test_metrics['auc']]
+    }
+    test_metric_df = pd.DataFrame.from_dict(values)
+    print("Test set's evaluation results:")
+    print(test_metric_df)
+    """
+
     return {
-        "fit": fit,
+        "models": trained_models,
         "cv_ngram": feature_pack['cv_ngram'],
         "tfidf_content": feature_pack['tfidf_content'],
         "tfidf_title": feature_pack['tfidf_title']
@@ -207,10 +282,14 @@ def classical_model(df):
 
 def basic_deep_learning_model(df):
     """
-
-    :param df:
-    :return:
+    Build a deep learning model
+    :param df: input data frame containing raw data
+    :return: trained neural network
     """
+    vocab_size = 19884
+    embedding_dim = 32
+    max_length = 200
+
     # extract data
     X = df.iloc[:, :-1].values
     Y = df.iloc[:, -1].values
@@ -259,10 +338,10 @@ def basic_deep_learning_model(df):
 
 def make_prediction(model_pack, file_path):
     """
-
-    :param model_pack:
-    :param file_path:
-    :return:
+    Make prediction for a single news file
+    :param model_pack: contained model weights and feature extracting transformers
+    :param file_path: full file system path to the .txt file containing the news
+    :return: none
     """
     print("Make prediction for", file_path)
     fit = model_pack['fit']
