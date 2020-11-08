@@ -186,7 +186,7 @@ def classical_models(df):
     :return: a dictionary of the trained models and features extracting transformers
     """
     # get the labels
-    labels = df.iloc[:, -1].values
+    labels = df['is_fake'].values
     labels = labels.astype('int')
 
     # extract the features from the data frame
@@ -198,10 +198,10 @@ def classical_models(df):
 
     # model
     models = {
-        "Logistic Regression": LogisticRegression(),
-        "Decision Tree": DecisionTreeClassifier(),
-        "Gaussian NB": GaussianNB(),
-        "XGBoost": XGBClassifier()
+        "Logistic Regression": LogisticRegression()
+        #"Decision Tree": DecisionTreeClassifier(),
+        #"Gaussian NB": GaussianNB(),
+        #"XGBoost": XGBClassifier()
     }
 
     # create a data frame to store validation metrics and test metrics
@@ -246,32 +246,6 @@ def classical_models(df):
     validation_metrics_df.to_csv('validation_results.csv')
     test_metrics_df.to_csv('test_results.csv')
 
-    """
-    # kfold cross validation
-    validation_metrics_df = cross_validate(model, X_train, Y_train)
-    print("Cross validation results:")
-    print(validation_metrics_df)
-
-    # train the model
-    fit = model.fit(X_train, Y_train)
-
-    # evaluate the model on the test set
-    test_metrics = evaluate(fit, X_test, Y_test)
-
-    # pack the results into a data frame
-    values = {
-        "Metric": ["Accuracy", "Precision", "Recall", "F1-Score", "AUC"],
-        "Value": [test_metrics['accuracy'],
-                  test_metrics['precision'],
-                  test_metrics['recall'],
-                  test_metrics['f_score'],
-                  test_metrics['auc']]
-    }
-    test_metric_df = pd.DataFrame.from_dict(values)
-    print("Test set's evaluation results:")
-    print(test_metric_df)
-    """
-
     return {
         "models": trained_models,
         "cv_ngram": feature_pack['cv_ngram'],
@@ -291,8 +265,8 @@ def basic_deep_learning_model(df):
     max_length = 200
 
     # extract data
-    X = df.iloc[:, :-1].values
-    Y = df.iloc[:, -1].values
+    X = df[['Title', 'Content']].values
+    Y = df['is_fake'].values
     Y = Y.astype('int')
 
     X_mat, tokenizer = word_embedding(raw_data=X[:, 1], vocab_size=vocab_size, max_length=max_length)

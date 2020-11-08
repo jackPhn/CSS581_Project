@@ -8,6 +8,7 @@ import nltk
 from nltk import ngrams
 import collections
 
+
 def validate_null_value(news_df):
 
     print(tabulate(news_df.head(5), headers='keys', tablefmt='psql'))
@@ -25,7 +26,7 @@ def validate_null_value(news_df):
     # check for data type
     print("Display data type of all columns")
     print(news_df.dtypes)
-    print(news_df.info)
+
 
 def validate_unique_recored(news_df):
     # Find the unique value of is_fake column

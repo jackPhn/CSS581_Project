@@ -14,6 +14,8 @@ def get_dataset_from_file(dataset: str, is_fake: bool, is_news:bool):
     titles = []
     # list of news contents
     contents = []
+    # category of the news
+    categories = []
 
     quality = 'fake' if is_fake else 'legit'
 
@@ -33,7 +35,26 @@ def get_dataset_from_file(dataset: str, is_fake: bool, is_news:bool):
             content = " ".join(content_lines)
             contents.append(content)
 
-    newsDf = pd.DataFrame({'Title': titles, 'Content': contents})
+        # assign the category
+        # celebrity     = 1
+        # business      = 2
+        # education     = 3
+        # entertainment = 4
+        # politics      = 5
+        # sport         = 6
+        # tech          = 7
+        if is_news:
+            if filename[0:3] == "biz": categories.append(2)
+            if filename[0:3] == "edu": categories.append(3)
+            if filename[0:3] == "ent": categories.append(4)
+            if filename[0:3] == "pol": categories.append(5)
+            if filename[0:3] == "spo": categories.append(6)
+            if filename[0:3] == "tec": categories.append(7)
+        else:
+            categories.append(1)
+
+    newsDf = pd.DataFrame({'Title': titles, 'Content': contents, 'Category': categories})
+
     if is_fake:
         newsDf['is_fake'] = 1
     else:
@@ -54,12 +75,13 @@ def build_real_news_dataframe(include_celeb: bool = False):
     """
     # real news dataset
     # I removed is_fake because the data type becomes objoct
-    column_names = ['Title', 'Content']
-    realDf = pd.DataFrame(columns=column_names)
+    #column_names = ['Title', 'Content']
+    realDf = pd.DataFrame()
 
-    # build the dataframe with the non-celeb news
+    # build the dataf rame with the non-celeb news
     realDf = realDf.append(get_dataset_from_file("fakeNewsDataset", False, True), ignore_index=True)
 
+    # include data from the celeb news
     if include_celeb:
         realDf = realDf.append(get_dataset_from_file("celebrityDataset", False, False), ignore_index=True)
 
@@ -73,11 +95,13 @@ def build_fake_news_dataframe(include_celeb: bool = False):
     :return: the fake news data frame
     """
     # fake new dataset
-    column_names = ['Title', 'Content']
+    #column_names = ['Title', 'Content']
     fakeDf = pd.DataFrame()
 
     # build the data frame with the non-celeb news
     fakeDf = fakeDf.append(get_dataset_from_file("fakeNewsDataset", True, True), ignore_index=True)
+
+    # include data from the celeb news
     if include_celeb:
         fakeDf = fakeDf.append(get_dataset_from_file("celebrityDataset", True, False), ignore_index=True)
 
