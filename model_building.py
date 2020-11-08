@@ -190,7 +190,7 @@ def classical_models(df):
     labels = labels.astype('int')
 
     # extract the features from the data frame
-    feature_pack = feature_extract(df.iloc[:, :-1].values)
+    feature_pack = feature_extract(df[['Title', 'Content']].values)
     features = feature_pack['features']
 
     # split the dataset 80 / 20 for train and test
@@ -262,14 +262,16 @@ def basic_deep_learning_model(df):
     """
     vocab_size = 19884
     embedding_dim = 32
-    max_length = 200
+    max_length = 76877
 
     # extract data
     X = df[['Title', 'Content']].values
     Y = df['is_fake'].values
     Y = Y.astype('int')
 
+    # perform word embedding on the news contents
     X_mat, tokenizer = word_embedding(raw_data=X[:, 1], vocab_size=vocab_size, max_length=max_length)
+
     # split the dataset
     X_train, X_test, Y_train, Y_test = train_test_split(X_mat, Y, test_size=0.2, random_state=0, stratify=Y)
 
@@ -285,7 +287,7 @@ def basic_deep_learning_model(df):
     model.summary()
 
     # train the model
-    num_epoch = 40
+    num_epoch = 20
     model.fit(X_train, Y_train, epochs=num_epoch, validation_data=(X_train, Y_train))
 
     word_index = tokenizer.word_index

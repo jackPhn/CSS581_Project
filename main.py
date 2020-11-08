@@ -99,6 +99,7 @@ def main():
     #----------------------------------------------------------------------
     # Try building a simple model
     # shuffle the dataset
+    # This part will take a significant ammount of time to run, comment out if not needed
     news_df = news_df.sample(frac=1, random_state=1).reset_index(drop=True)
     pack = classical_models(news_df)
 
