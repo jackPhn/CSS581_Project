@@ -24,7 +24,7 @@ from data_exploration import (
 from model_building import (
     classical_models,
     make_prediction,
-    basic_deep_learning_model
+    deep_learning_with_embedding
 )
 
 
@@ -99,7 +99,7 @@ def main():
     #----------------------------------------------------------------------
     # Try building a simple model
     # shuffle the dataset
-    # This part will take a significant ammount of time to run, comment out if not needed
+    # This part will take a significant amount of time to run, comment out if not needed
     news_df = news_df.sample(frac=1, random_state=1).reset_index(drop=True)
     pack = classical_models(news_df)
 
@@ -109,7 +109,7 @@ def main():
 
     # ----------------------------------------------------------------------
     # Try deep learning
-    model = basic_deep_learning_model(news_df)
+    model = deep_learning_with_embedding(news_df)
 
 
     """

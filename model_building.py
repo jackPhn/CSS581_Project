@@ -17,6 +17,11 @@ from sklearn.metrics import (
     roc_curve,
     roc_auc_score,
 )
+from keras_evaluation_metrics import(
+    precision_m,
+    recall_m,
+    f1_m
+)
 
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.naive_bayes import GaussianNB
@@ -89,14 +94,14 @@ def feature_extract(X):
     }
 
 
-def word_embedding(raw_data, vocab_size, max_length, tokenizer=None):
+def word_tokenize(raw_data, vocab_size, max_length, tokenizer=None):
     """
-
-    :param raw_data:
-    :param vocab_size:
-    :param max_length:
-    :param tokenizer:
-    :return:
+    Tokenize words
+    :param raw_data:    input list of texts
+    :param vocab_size:  size of the vocabulary
+    :param max_length:  maximum length of an input sequence
+    :param tokenizer:   a trained tokenizer. Create a new one if none
+    :return:            list of tokenized input texts and trained tokenizer
     """
     trunc_type = 'post'
     padding_type = 'post'
@@ -243,8 +248,8 @@ def classical_models(df):
     print(test_metrics_df)
 
     # Write the results to .csv files
-    validation_metrics_df.to_csv('validation_results.csv')
-    test_metrics_df.to_csv('test_results.csv')
+    validation_metrics_df.to_csv('output/validation_results.csv')
+    test_metrics_df.to_csv('output/test_results.csv')
 
     return {
         "models": trained_models,
@@ -254,23 +259,23 @@ def classical_models(df):
     }
 
 
-def basic_deep_learning_model(df):
+def deep_learning_with_embedding(df):
     """
     Build a deep learning model
     :param df: input data frame containing raw data
     :return: trained neural network
     """
-    vocab_size = 19884
+    vocab_size = 19885  # max number of words possible in Tokenizer
     embedding_dim = 32
-    max_length = 76877
+    max_length = 200
 
     # extract data
     X = df[['Title', 'Content']].values
     Y = df['is_fake'].values
     Y = Y.astype('int')
 
-    # perform word embedding on the news contents
-    X_mat, tokenizer = word_embedding(raw_data=X[:, 1], vocab_size=vocab_size, max_length=max_length)
+    # tokenize the words
+    X_mat, trained_tokenizer = word_tokenize(raw_data=X[:, 1], vocab_size=vocab_size, max_length=max_length)
 
     # split the dataset
     X_train, X_test, Y_train, Y_test = train_test_split(X_mat, Y, test_size=0.2, random_state=0, stratify=Y)
@@ -279,18 +284,21 @@ def basic_deep_learning_model(df):
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
         tf.keras.layers.GlobalAveragePooling1D(),
-        tf.keras.layers.Dense(6, activation='relu'),
+        tf.keras.layers.Dense(10, activation='relu'),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
 
-    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    # compile the model
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', precision_m, recall_m, f1_m])
     model.summary()
 
     # train the model
-    num_epoch = 20
-    model.fit(X_train, Y_train, epochs=num_epoch, validation_data=(X_train, Y_train))
+    num_epoch = 30
+    history = model.fit(X_train, Y_train, epochs=num_epoch, validation_data=(X_train, Y_train))
 
-    word_index = tokenizer.word_index
+    # get the dictionary of words and frequencies in the corpus
+    word_index = trained_tokenizer.word_index
+    # reverse the key-value relationship in word_index
     reverse_word_index = dict([(value, key) for (key, value) in word_index.items()])
 
     # get the weights for the embedding layer
@@ -299,15 +307,33 @@ def basic_deep_learning_model(df):
 
     # write out the embedding vectors and metadata
     # To view the visualization, go to https://projector.tensorflow.org
-    out_v = io.open('vectors.tsv', 'w', encoding='utf-8')
-    out_m = io.open('meta.tsv', 'w', encoding='utf-8')
+    out_v = io.open('output/vectors.tsv', 'w', encoding='utf-8')
+    out_m = io.open('output/meta.tsv', 'w', encoding='utf-8')
     for word_num in range(1, vocab_size):
         word = reverse_word_index[word_num]
         embeddings = weights[word_num]
         out_m.write(word + '\n')
         out_v.write('\t'.join([str(x) for x in embeddings]) + '\n')
+    # close files
     out_m.close()
     out_v.close()
+
+    """
+    # make prediction
+    title = []
+    content = []
+
+    # open file and get data
+    with open("/Users/jack/programming/machine_learning/CSS581_Project_Repo/CSS581_Project/fakeNewsDatasets/celebrityDataset/legit/006legit.txt") as file:
+        # read and store the title
+        title.append(file.readline())
+
+        # read and store the content
+        content_lines = file.read().splitlines()
+        content.append(" ".join(content_lines))
+    sample, _ = word_tokenize(content, vocab_size, max_length, trained_tokenizer)
+    print(model.predict(sample))
+    """
 
     return model
 
