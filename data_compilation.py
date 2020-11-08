@@ -3,7 +3,7 @@ import os
 from tabulate import tabulate
 
 
-def get_dataset_from_file(dataset: str, is_fake: bool):
+def get_dataset_from_file(dataset: str, is_fake: bool, is_news:bool):
     """
     Return a data frame from files
     :param dataset: name of the dataset
@@ -38,6 +38,10 @@ def get_dataset_from_file(dataset: str, is_fake: bool):
         newsDf['is_fake'] = 1
     else:
         newsDf['is_fake'] = 0
+    if is_news:
+        newsDf['is_news'] = 1
+    else:
+        newsDf['is_news'] = 0
 
     return newsDf
 
@@ -49,14 +53,15 @@ def build_real_news_dataframe(include_celeb: bool = False):
     :return: the real news data frame
     """
     # real news dataset
-    column_names = ['Title', 'Content', 'is_fake']
+    # I removed is_fake because the data type becomes objoct
+    column_names = ['Title', 'Content']
     realDf = pd.DataFrame(columns=column_names)
 
     # build the dataframe with the non-celeb news
-    realDf = realDf.append(get_dataset_from_file("fakeNewsDataset", False), ignore_index=True)
+    realDf = realDf.append(get_dataset_from_file("fakeNewsDataset", False, True), ignore_index=True)
 
     if include_celeb:
-        realDf = realDf.append(get_dataset_from_file("celebrityDataset", False), ignore_index=True)
+        realDf = realDf.append(get_dataset_from_file("celebrityDataset", False, False), ignore_index=True)
 
     return realDf
 
@@ -68,13 +73,13 @@ def build_fake_news_dataframe(include_celeb: bool = False):
     :return: the fake news data frame
     """
     # fake new dataset
-    column_names = ['Title', 'Content', 'is_fake']
+    column_names = ['Title', 'Content']
     fakeDf = pd.DataFrame()
 
     # build the data frame with the non-celeb news
-    fakeDf = fakeDf.append(get_dataset_from_file("fakeNewsDataset", True), ignore_index=True)
+    fakeDf = fakeDf.append(get_dataset_from_file("fakeNewsDataset", True, True), ignore_index=True)
     if include_celeb:
-        fakeDf = fakeDf.append(get_dataset_from_file("celebrityDataset", True), ignore_index=True)
+        fakeDf = fakeDf.append(get_dataset_from_file("celebrityDataset", True, False), ignore_index=True)
 
     return fakeDf
 

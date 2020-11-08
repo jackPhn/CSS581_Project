@@ -1,9 +1,12 @@
 import numpy as np
+import pandas as pd
+
 from data_compilation import (
     build_real_news_dataframe,
     build_fake_news_dataframe,
     concatenet_dataframes
 )
+
 from data_exploration import (
     # claim_version_combine,
     # news_version_combine,
@@ -14,6 +17,7 @@ from data_exploration import (
     # claim_preprocess,
     # news_preprocess,
     validate_null_value,
+    validate_unique_recored,
     ngram_frequency,
     word_frequency
 )
@@ -24,8 +28,14 @@ from model_building import (
 )
 
 
+from data_visualization import (
+    visualize_real_feak,
+    visualize_news_celebrity
+)
+
+
 def main():
-    #data loading
+    # data loading
     real_news_df = build_real_news_dataframe(include_celeb=True)
     fake_news_df = build_fake_news_dataframe(include_celeb=True)
     news_df = concatenet_dataframes(real_news_df, fake_news_df)
@@ -45,6 +55,7 @@ def main():
 
     # find missing values
     validate_null_value(news_df)
+    validate_unique_recored(news_df)
 
     # concatenate all contents of real news
     real_news_contents = np.array(real_news_df['Content'].tolist())
