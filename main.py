@@ -30,7 +30,7 @@ from model_building import (
 
 from data_visualization import (
     visualize_real_feak,
-    visualize_news_celebrity
+    visualize_news_celebrity,
 )
 
 
@@ -90,6 +90,11 @@ def main():
     print("Frequency of the 20 most common words in fake news:")
     print(fake_news_word_fred.most_common(20))
     print()
+
+    # ----------------------------------------------------------------------
+    # Visualization
+    visualize_real_feak(news_df)
+    visualize_news_celebrity(news_df)
 
     #----------------------------------------------------------------------
     # Try building a simple model
