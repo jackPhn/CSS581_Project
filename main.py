@@ -57,6 +57,7 @@ def main():
     validate_null_value(news_df)
     validate_unique_recored(news_df)
 
+    # -------------------------------------------------------------------------------------------------
     # concatenate all contents of real news
     real_news_contents = np.array(real_news_df['Content'].tolist())
     real_news_joined = " ".join(real_news_contents)
@@ -73,7 +74,7 @@ def main():
     print("Frequency of the 20 most common words in real news:")
     print(real_news_word_fred.most_common(20))
 
-    # --------------------------------------------------------------------
+    # -------------------------------------------------------------------------------------------------
     # concatenate all contents of fake news
     fake_news_contents = np.array(fake_news_df['Content'].tolist())
     fake_news_joined = " ".join(fake_news_contents)
@@ -91,26 +92,33 @@ def main():
     print(fake_news_word_fred.most_common(20))
     print()
 
-    # ----------------------------------------------------------------------
+    # -------------------------------------------------------------------------------------------------
     # Visualization
     visualize_real_feak(news_df)
     visualize_news_celebrity(news_df)
 
-    #----------------------------------------------------------------------
-    # Try building a simple model
+    # -------------------------------------------------------------------------------------------------
+    # classical models
     # shuffle the dataset
     # This part will take a significant amount of time to run, comment out if not needed
     news_df = news_df.sample(frac=1, random_state=1).reset_index(drop=True)
-    pack = classical_models(news_df)
+    classic_pack = classical_models(news_df)
+
+    # change the file path below to the absolute file path of a sample used to make prediction on
+    sample_file_path = "/Users/jack/programming/machine_learning/CSS581_Project_Repo/CSS581_Project/fakeNewsDatasets/fakeNewsDataset/fake/tech008.fake.txt"
+
+    # make a prediction
+    print()
+    make_prediction(classic_pack, sample_file_path, "Logistic Regression")
+
+    # -------------------------------------------------------------------------------------------------
+    # deep learning model with word embedding
+    dl_pack = deep_learning_with_embedding(news_df)
 
     # make a prediction
     # change the file path below to the absolute file path of a sample
-    #make_prediction(pack, "/Users/jack/programming/machine_learning/CSS581_Project_Repo/CSS581_Project/fakeNewsDatasets/fakeNewsDataset/legit/biz14.legit.txt")
-
-    # ----------------------------------------------------------------------
-    # Try deep learning
-    model = deep_learning_with_embedding(news_df)
-
+    print()
+    make_prediction(dl_pack, sample_file_path, "dl")
 
     """
     #Claim dataframe

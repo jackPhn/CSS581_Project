@@ -284,7 +284,7 @@ def deep_learning_with_embedding(df):
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
         tf.keras.layers.GlobalAveragePooling1D(),
-        tf.keras.layers.Dense(10, activation='relu'),
+        tf.keras.layers.Dense(6, activation='relu'),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
 
@@ -293,8 +293,8 @@ def deep_learning_with_embedding(df):
     model.summary()
 
     # train the model
-    num_epoch = 30
-    history = model.fit(X_train, Y_train, epochs=num_epoch, validation_data=(X_train, Y_train))
+    num_epoch = 40
+    history = model.fit(X_train, Y_train, epochs=num_epoch, validation_data=(X_test, Y_test))
 
     # get the dictionary of words and frequencies in the corpus
     word_index = trained_tokenizer.word_index
@@ -307,8 +307,8 @@ def deep_learning_with_embedding(df):
 
     # write out the embedding vectors and metadata
     # To view the visualization, go to https://projector.tensorflow.org
-    out_v = io.open('output/vectors.tsv', 'w', encoding='utf-8')
-    out_m = io.open('output/meta.tsv', 'w', encoding='utf-8')
+    out_v = io.open('output/content_vectors.tsv', 'w', encoding='utf-8')
+    out_m = io.open('output/content_meta.tsv', 'w', encoding='utf-8')
     for word_num in range(1, vocab_size):
         word = reverse_word_index[word_num]
         embeddings = weights[word_num]
@@ -318,38 +318,24 @@ def deep_learning_with_embedding(df):
     out_m.close()
     out_v.close()
 
-    """
-    # make prediction
-    title = []
-    content = []
-
-    # open file and get data
-    with open("/Users/jack/programming/machine_learning/CSS581_Project_Repo/CSS581_Project/fakeNewsDatasets/celebrityDataset/legit/006legit.txt") as file:
-        # read and store the title
-        title.append(file.readline())
-
-        # read and store the content
-        content_lines = file.read().splitlines()
-        content.append(" ".join(content_lines))
-    sample, _ = word_tokenize(content, vocab_size, max_length, trained_tokenizer)
-    print(model.predict(sample))
-    """
-
-    return model
+    return {
+        "fit": model,
+        "tokenizer": trained_tokenizer,
+        "vocab_size": 19885,
+        "embedding_dim": 32,
+        "max_length": 200
+    }
 
 
-def make_prediction(model_pack, file_path):
+def make_prediction(model_pack, file_path: str, model_name: str):
     """
     Make prediction for a single news file
     :param model_pack: contained model weights and feature extracting transformers
     :param file_path: full file system path to the .txt file containing the news
+    :param model_name: name of the model to use
     :return: none
     """
     print("Make prediction for", file_path)
-    fit = model_pack['fit']
-    cv_ngram = model_pack['cv_ngram']
-    tfidf_title = model_pack['tfidf_title']
-    tfidf_content = model_pack['tfidf_content']
 
     title = []
     content = []
@@ -363,16 +349,32 @@ def make_prediction(model_pack, file_path):
         content_lines = file.read().splitlines()
         content.append(" ".join(content_lines))
 
-    # extract features
-    mat_title, _ = tfdif_transform(raw_data=title, tfidf_vectorizer=tfidf_title)
-    mat_content, _ = tfdif_transform(raw_data=content, tfidf_vectorizer=tfidf_content)
-    mat_ngram, _ = ngram_vectorize(raw_data=content, cv_ngram=cv_ngram)
-    mat_sample = np.hstack((mat_title, mat_content, mat_ngram))
+    if model_name == "dl":
+        # deep learning model
+        fit = model_pack['fit']
+        trained_tokenizer = model_pack['tokenizer']
+        vocab_size = model_pack['vocab_size']
+        max_length = model_pack['max_length']
+        sample, _ = word_tokenize(content, vocab_size, max_length, trained_tokenizer)
+    else:
+        # other classical models
+        models = model_pack['models']
+        fit = models[model_name]
+        cv_ngram = model_pack['cv_ngram']
+        tfidf_title = model_pack['tfidf_title']
+        tfidf_content = model_pack['tfidf_content']
+
+        # extract features
+        mat_title, _ = tfdif_transform(raw_data=title, tfidf_vectorizer=tfidf_title)
+        mat_content, _ = tfdif_transform(raw_data=content, tfidf_vectorizer=tfidf_content)
+        mat_ngram, _ = ngram_vectorize(raw_data=content, cv_ngram=cv_ngram)
+        sample = np.hstack((mat_title, mat_content, mat_ngram))
 
     # make prediction
-    pred = fit.predict(mat_sample)
+    pred = fit.predict(sample)
 
-    if pred[0] == 1:
+    # Cutoff threshold is 0.5
+    if pred[0] > 0.5:
         print("This is fake news")
     else:
         print("This is legit news")
