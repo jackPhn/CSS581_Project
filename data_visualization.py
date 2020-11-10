@@ -2,6 +2,9 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from tabulate import tabulate
+from wordcloud import WordCloud, STOPWORDS
+import seaborn as sns
+
 
 from sklearn.metrics import (
     accuracy_score,
@@ -30,7 +33,29 @@ def visualize_news_celebrity(news_df):
     # bins = compute_histogram_bins(is_news_data, 10)
     plotSingleHistogram(is_news_data, is_no_news_data, "Is News", "Count", "News and Celebroty Count")
 
+# visualize content catagory
+# def visulaize_content_catagory(df):
+#     plt.figure(figsize = (8,8))
+#     sns.countplot(y="subject", data= df)
+#     plt.show()
 
+# visualis fake and ligit
+def visulaize_fake_ligit(df):
+    plt.figure(figsize = (8,8))
+    sns.countplot(y="is_fake", data= df)
+    plt.show()
+
+def visualize_fake_word_cloud_plot(df, stop_words):
+    plt.figure(figsize=(12,12))
+    wc = WordCloud(max_words = 2000, width = 8000, height = 8000, stopwords = stop_words).generate(" ".join(df[df.is_fake==1].clean_joined))
+    plt.imshow(wc, interpolation='bilinear')
+    plt.show()
+
+def visualize_ligit_word_cloud_plot(df, stop_words):
+    plt.figure(figsize=(12,12))
+    wc = WordCloud(max_words = 2000, width = 8000, height = 8000, stopwords = stop_words).generate(" ".join(df[df.is_fake==0].clean_joined))
+    plt.imshow(wc, interpolation='bilinear')
+    plt.show()
 
 #plot single bar histogram
 def plotSingleHistogram(first_bar_data, second_bar_data, xlable, ylable, title):
@@ -43,16 +68,6 @@ def plotSingleHistogram(first_bar_data, second_bar_data, xlable, ylable, title):
     plt.ylabel(ylable)
     plt.title(title)
     plt.show()
-
-# def compute_histogram_bins(data, desired_bin_size):
-#     min_val = np.min(data)
-#     max_val = np.max(data)
-#     min_boundary = -1.0 * (min_val % desired_bin_size - min_val)
-#     max_boundary = max_val - max_val % desired_bin_size + desired_bin_size
-#     n_bins = int((max_boundary - min_boundary) / desired_bin_size) + 1
-#     bins = np.linspace(min_boundary, max_boundary, n_bins)
-#     return bins
-
 
 
 
