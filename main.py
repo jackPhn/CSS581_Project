@@ -52,7 +52,6 @@ def main():
     print("The number of words in the longest piece of news is:", np.max(news_length))
     print()
 
-
     # find out the total number of unique words in the corpus
     news_contents = np.array(news_df['Content'].tolist())
     news_df_joined = " ".join(news_contents).lower()
@@ -111,7 +110,6 @@ def main():
     # visualize_fake_word_cloud_plot(df_clean, stop_words)
     # visualize_ligit_word_cloud_plot(df_clean, stop_words)
 
-
     # -------------------------------------------------------------------------------------------------
     # classical models
     # shuffle the dataset
@@ -132,14 +130,9 @@ def main():
 
     # make a prediction
     # change the file path below to the absolute file path of a sample
-    #make_prediction(pack, "/Users/jack/programming/machine_learning/CSS581_Project_Repo/CSS581_Project/fakeNewsDatasets/fakeNewsDataset/legit/biz14.legit.txt")
-
-    # ----------------------------------------------------------------------
-    # Try deep learning
-    model = deep_learning_with_embedding(news_df)
-
     print()
     make_prediction(dl_pack, sample_file_path, "dl")
+
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
