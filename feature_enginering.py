@@ -7,7 +7,6 @@ import numpy as np
 from tabulate import tabulate
 
 
-
 stop_words = []
 
 def process_feature_enginering(df):

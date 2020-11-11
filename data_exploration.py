@@ -9,7 +9,6 @@ from nltk import ngrams
 import collections
 
 
-
 def validate_null_value(news_df):
 
     print(tabulate(news_df.head(5), headers='keys', tablefmt='psql'))
@@ -41,6 +40,7 @@ def validate_unique_recored(news_df):
     # Find the unique value of is_news column
     print("Display the unique Values of is_news")
     print(news_df.is_news.unique())
+
 
 def word_frequency(text: str):
     """

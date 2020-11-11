@@ -52,7 +52,6 @@ def main():
     print("The number of words in the longest piece of news is:", np.max(news_length))
     print()
 
-
     # find out the total number of unique words in the corpus
     news_contents = np.array(news_df['Content'].tolist())
     news_df_joined = " ".join(news_contents).lower()
@@ -107,10 +106,9 @@ def main():
     # -------------------------------------------------
 
     # LSTM and RNN
-    df_clean, stop_words = process_feature_enginering(news_df)
+    # df_clean, stop_words = process_feature_enginering(news_df)
     # visualize_fake_word_cloud_plot(df_clean, stop_words)
     # visualize_ligit_word_cloud_plot(df_clean, stop_words)
-
 
     # -------------------------------------------------------------------------------------------------
     # classical models
@@ -120,19 +118,21 @@ def main():
     classic_pack = classical_models(news_df)
 
     # change the file path below to the absolute file path of a sample used to make prediction on
-    # sample_file_path = "/Users/jack/programming/machine_learning/CSS581_Project_Repo/CSS581_Project/fakeNewsDatasets/fakeNewsDataset/fake/tech008.fake.txt"
+    sample_file_path = "/Users/jack/programming/machine_learning/CSS581_Project_Repo/CSS581_Project/fakeNewsDatasets/fakeNewsDataset/fake/tech008.fake.txt"
 
     # make a prediction
     print()
-    # make_prediction(classic_pack, sample_file_path, "Logistic Regression")
+    make_prediction(classic_pack, sample_file_path, "Logistic Regression")
 
+    # -------------------------------------------------------------------------------------------------
+    # deep learning model with word embedding
+    dl_pack = deep_learning_with_embedding(news_df)
 
-    # ----------------------------------------------------------------------
-    # Try deep learning
-    # model = deep_learning_with_embedding(news_df)
-
+    # make a prediction
+    # change the file path below to the absolute file path of a sample
     print()
-    # make_prediction(dl_pack, sample_file_path, "dl")
+    make_prediction(dl_pack, sample_file_path, "dl")
+
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':

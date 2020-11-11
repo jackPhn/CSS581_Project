@@ -1,8 +1,6 @@
 import io
 import pandas as pd
 import numpy as np
-
-
 from sklearn.model_selection import (
     train_test_split,
     StratifiedKFold
@@ -196,12 +194,13 @@ def classical_models(df):
     :param df: datafram of raw data
     :return: a dictionary of the trained models and features extracting transformers
     """
-    # get the labels
-    labels = df['is_fake'].values
-    labels = labels.astype('int')
+    # extract data
+    X = df[['Title', 'Content']].values
+    Y = df['is_fake'].values
+    labels = Y.astype('int')
 
     # extract the features from the data frame
-    feature_pack = feature_extract(df[['Title', 'Content']].values)
+    feature_pack = feature_extract(X)
     features = feature_pack['features']
 
     # split the dataset 80 / 20 for train and test
@@ -271,26 +270,26 @@ def deep_learning_with_embedding(df):
     :param df: input data frame containing raw data
     :return: trained neural network
     """
-    vocab_size = 19885  # max number of words possible in Tokenizer
+    vocab_size = 1000 #19885  # max number of words possible in Tokenizer
     embedding_dim = 32
     max_length = 200
 
     # extract data
     X = df[['Title', 'Content']].values
     Y = df['is_fake'].values
-    Y = Y.astype('int')
+    labels = Y.astype('int')
 
     # tokenize the words
-    X_mat, trained_tokenizer = word_tokenize(raw_data=X[:, 1], vocab_size=vocab_size, max_length=max_length)
+    features, trained_tokenizer = word_tokenize(raw_data=X[:, 1], vocab_size=vocab_size, max_length=max_length)
 
     # split the dataset
-    X_train, X_test, Y_train, Y_test = train_test_split(X_mat, Y, test_size=0.2, random_state=0, stratify=Y)
+    X_train, X_test, Y_train, Y_test = train_test_split(features, labels, test_size=0.2, random_state=0, stratify=Y)
 
     # build the model
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
         tf.keras.layers.GlobalAveragePooling1D(),
-        tf.keras.layers.Dense(6, activation='relu'),
+        tf.keras.layers.Dense(10, activation='relu'),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
 
@@ -299,7 +298,7 @@ def deep_learning_with_embedding(df):
     model.summary()
 
     # train the model
-    num_epoch = 40
+    num_epoch = 60
     history = model.fit(X_train, Y_train, epochs=num_epoch, validation_data=(X_test, Y_test))
 
     # get the dictionary of words and frequencies in the corpus
@@ -327,9 +326,9 @@ def deep_learning_with_embedding(df):
     return {
         "fit": model,
         "tokenizer": trained_tokenizer,
-        "vocab_size": 19885,
-        "embedding_dim": 32,
-        "max_length": 200
+        "vocab_size": vocab_size,
+        "embedding_dim": embedding_dim,
+        "max_length": max_length
     }
 
 
