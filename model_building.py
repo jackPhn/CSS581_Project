@@ -19,6 +19,8 @@ from sklearn.metrics import (
     roc_curve,
     roc_auc_score,
 )
+from tensorflow.python.keras.layers import Embedding, LSTM
+
 from keras_evaluation_metrics import(
     precision_m,
     recall_m,
@@ -33,6 +35,8 @@ from xgboost import XGBClassifier
 import tensorflow as tf
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
+from keras.models import Sequential
+from tensorflow.keras.layers import Embedding,Bidirectional,Dense
 
 
 def tfdif_transform(raw_data, tfidf_vectorizer=None):
@@ -380,3 +384,61 @@ def make_prediction(model_pack, file_path: str, model_name: str):
         print("This is fake news")
     else:
         print("This is legit news")
+
+def create_pad_sequence(df, total_words, maxlen):
+    x_train, x_test, y_train, y_test = train_test_split(df.clean_joined, df.is_fake, test_size=0.2)
+    tokenizer = Tokenizer(new_words=total_words)
+    # update internal vocabulary based on a list of tests
+    tokenizer.fit_on_texts(x_train)
+    # transformation each text into a sequences integer
+    train_sequences = tokenizer.texts_to_sequences(x_train)
+    test_sequences = tokenizer.texts_to_sequences(x_train)
+    pad_train = pad_sequences(train_sequences, maxlen=maxlen, padding='post', truncating='post')
+    pad_test = pad_sequences(test_sequences, maxlen=maxlen, padding='post', truncating='post')
+
+def build_ltsm_model(padded_train, total_words, y_train):
+    # create sequential model
+    model = Sequential()
+
+    # embedding layer
+    model.add(Embedding(total_words, output_dim= 128))
+
+    # Bi-directional RNN/LSTM
+    model.add(Bidirectional (LSTM(128)))
+
+    #Dense layers
+    model.add(Dense(128, activation='relu'))
+    model.add(Dense(1,activation='sigmoid'))
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
+    model.summary()
+    y_train = np.asarray(y_train)
+
+    # train the model
+    print(model.fit(padded_train, y_train, batch_size=64, validation_split=0.1,epochs=2))
+
+    return model
+
+def predict_stml_model(model, padded_test, y_test):
+    pred = model.predict(padded_test)
+    prediction = []
+    # if the predicted value is > 0.5 it is real else it is fake
+    for i in range(len(pred)):
+        if pred[i].items > 0.5:
+            prediction.append(1)
+        else:
+            prediction.append(0)
+
+    # getting the meassurement
+    accuracy = accuracy_score(list(y_test), prediction)
+    precision = precision_score(list(y_test), prediction)
+    recall = recall_score(list(y_test), prediction)
+    f1score = f1_score(list(y_test), prediction)
+    auc = roc_auc_score(list(y_test), prediction)
+
+    print("STML Model Accuracy: ", accuracy)
+    print("STML Model Precision: ", precision)
+    print("STML Model Recall: ", recall)
+    print("STML Model F1_score: ", f1score)
+    print("STML Model AUC: ", auc)
+
+    return prediction

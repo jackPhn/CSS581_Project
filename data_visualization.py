@@ -4,6 +4,9 @@ import matplotlib.pyplot as plt
 from tabulate import tabulate
 from wordcloud import WordCloud, STOPWORDS
 import seaborn as sns
+import nltk
+import plotly.express as px
+from sklearn.metrics import confusion_matrix
 
 
 from sklearn.metrics import (
@@ -56,6 +59,22 @@ def visualize_ligit_word_cloud_plot(df, stop_words):
     wc = WordCloud(max_words = 2000, width = 8000, height = 8000, stopwords = stop_words).generate(" ".join(df[df.is_fake==0].clean_joined))
     plt.imshow(wc, interpolation='bilinear')
     plt.show()
+
+def visualize_word_distribution(df):
+    fig = px.histogram(x=[len(nltk.wordtokenize(x)) for x in df.clean_joined], nbins=100)
+    fig.show()
+
+def visualize_confusion_matrix(prediction, y_test):
+    '''
+    :param prediction:
+    :param y_test:
+    :return:
+    '''
+    cm = confusion_matrix(list(y_test), prediction)
+    plt.figure(figsize=(10,10))
+    sns.heatmap(cm,annot=True)
+    plt.show()
+
 
 #plot single bar histogram
 def plotSingleHistogram(first_bar_data, second_bar_data, xlable, ylable, title):

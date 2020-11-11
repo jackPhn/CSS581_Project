@@ -31,8 +31,8 @@ def combine_two_columns(df, first_column, second_column, new_column):
 
 def remove_stop_words(df):
     '''
-    :param df:
-    :return:
+    :param df:dataframe
+    :return:new datafream and stop_words
     '''
     stop_words = stopwords.words('english')
     stop_words.extend(['lot', 'close', 'her', 'to', 'for', 'with', 'and'])
@@ -41,14 +41,22 @@ def remove_stop_words(df):
     print(tabulate(df.head(5), headers='keys', tablefmt='psql'))
     print(df.shape)
     '''
+    
+    '''
+    return df, stop_words
+
+# find the total list of words excluding stop words and redundent words
+def find_total_words(df):
+    '''
+    :param df: dataframe
+    :return: list of words
+    '''
     list_of_words = []
     for i in df.clean:
         for j in i:
             list_of_words.append(j)
     total_words = len(list(set(list_of_words)))
-    '''
-    return df, stop_words
-
+    return total_words
 
 def preprocess_stop_word(text):
     '''
@@ -59,6 +67,18 @@ def preprocess_stop_word(text):
     result = []
     for token in gensim.utils.simple_preprocess(text):
         if token not in gensim.parsing.preprocessing.STOPWORDS and len(token) > 3 and token not in stop_words:
-        # if token not in gensim.parsing.preprocessing.STOPWORDS and len(token) > 3:
             result.append(token)
     return result
+
+# find the max lengeth of a token
+def find_max_token_length(df):
+    '''
+    :param df:
+    :return:
+    '''
+    maxlen = -1
+    for doc in df.clean_joined:
+        tokens = nltk.wordpunct_tokenize(doc)
+        if(maxlen < len(tokens)):
+            maxlen = len(tokens)
+    return  maxlen
