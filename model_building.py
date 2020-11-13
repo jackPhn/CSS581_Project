@@ -37,7 +37,7 @@ from keras.models import Sequential
 from tensorflow.keras.layers import Embedding,Bidirectional,Dense
 
 
-def tfdif_transform(raw_data, tfidf_vectorizer=None):
+def tfidf_transform(raw_data, tfidf_vectorizer=None):
     """
     Helper function to convert raw data of text into tf-idf matrix
     :param raw_data: raw text data
@@ -80,10 +80,10 @@ def feature_extract(X):
     :return: feature matrix and feature extracting transformers
     """
     # Convert the titles to Tf-iDF matrix
-    mat_title, tfidf_title = tfdif_transform(X[:, 0])
+    mat_title, tfidf_title = tfidf_transform(X[:, 0])
 
     # Convert the contents to Tf-iDF matrix
-    mat_content, tfidf_content = tfdif_transform(X[:, 1])
+    mat_content, tfidf_content = tfidf_transform(X[:, 1])
 
     # count ngrams in the contents
     mat_ngram, cv_ngram = ngram_vectorize(X[:, 1])
@@ -370,8 +370,8 @@ def make_prediction(model_pack, file_path: str, model_name: str):
         tfidf_content = model_pack['tfidf_content']
 
         # extract features
-        mat_title, _ = tfdif_transform(raw_data=title, tfidf_vectorizer=tfidf_title)
-        mat_content, _ = tfdif_transform(raw_data=content, tfidf_vectorizer=tfidf_content)
+        mat_title, _ = tfidf_transform(raw_data=title, tfidf_vectorizer=tfidf_title)
+        mat_content, _ = tfidf_transform(raw_data=content, tfidf_vectorizer=tfidf_content)
         mat_ngram, _ = ngram_vectorize(raw_data=content, cv_ngram=cv_ngram)
         sample = np.hstack((mat_title, mat_content, mat_ngram))
 
