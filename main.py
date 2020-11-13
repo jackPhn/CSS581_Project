@@ -24,7 +24,7 @@ from data_exploration import (
 from model_building import (
     classical_models,
     make_prediction,
-    deep_learning_with_embedding
+    deep_learning_model
 )
 
 
@@ -115,18 +115,18 @@ def main():
     # shuffle the dataset
     # This part will take a significant amount of time to run, comment out if not needed
     news_df = news_df.sample(frac=1, random_state=1).reset_index(drop=True)
-    classic_pack = classical_models(news_df)
+    #classic_pack = classical_models(news_df)
 
     # change the file path below to the absolute file path of a sample used to make prediction on
     sample_file_path = "/Users/jack/programming/machine_learning/CSS581_Project_Repo/CSS581_Project/fakeNewsDatasets/fakeNewsDataset/fake/tech008.fake.txt"
 
     # make a prediction
     print()
-    make_prediction(classic_pack, sample_file_path, "Logistic Regression")
+    #make_prediction(classic_pack, sample_file_path, "Logistic Regression")
 
     # -------------------------------------------------------------------------------------------------
     # deep learning model with word embedding
-    dl_pack = deep_learning_with_embedding(news_df)
+    dl_pack = deep_learning_model(news_df)
 
     # make a prediction
     # change the file path below to the absolute file path of a sample

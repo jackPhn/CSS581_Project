@@ -8,7 +8,6 @@ import nltk
 import plotly.express as px
 from sklearn.metrics import confusion_matrix
 
-
 from sklearn.metrics import (
     accuracy_score,
     precision_score,
@@ -150,7 +149,3 @@ def autolabel(rects, ax):
         ax.text(rect.get_x() + rect.get_width()/2., 1.05*height,
                 '%d' % int(height),
                 ha='center', va='bottom')
-
-
-
-

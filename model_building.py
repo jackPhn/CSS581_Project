@@ -1,6 +1,7 @@
 import io
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from sklearn.model_selection import (
     train_test_split,
     StratifiedKFold
@@ -264,14 +265,14 @@ def classical_models(df):
     }
 
 
-def deep_learning_with_embedding(df):
+def deep_learning_model(df):
     """
     Build a deep learning model
     :param df: input data frame containing raw data
     :return: trained neural network
     """
-    vocab_size = 1000 #19885  # max number of words possible in Tokenizer
-    embedding_dim = 32
+    vocab_size = 3000   #19885 # max number of words possible in Tokenizer
+    embedding_dim = 100
     max_length = 200
 
     # extract data
@@ -286,20 +287,63 @@ def deep_learning_with_embedding(df):
     X_train, X_test, Y_train, Y_test = train_test_split(features, labels, test_size=0.2, random_state=0, stratify=Y)
 
     # build the model
+    """
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
         tf.keras.layers.GlobalAveragePooling1D(),
         tf.keras.layers.Dense(10, activation='relu'),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
+    """
+    model = tf.keras.Sequential([
+        tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Conv1D(64, 5, activation='relu'),
+        tf.keras.layers.MaxPool1D(),
+        tf.keras.layers.LSTM(20, return_sequences=True),
+        tf.keras.layers.LSTM(20),
+        tf.keras.layers.Dense(1, activation='sigmoid')
+    ])
+    """
+    model = tf.keras.Sequential([
+        tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Conv1D(64, 5, activation='relu'),
+        tf.keras.layers.MaxPool1D(),
+        tf.keras.layers.LSTM(20, return_sequences=True),
+        tf.keras.layers.LSTM(20),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dense(512),
+        tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dense(256),
+        tf.keras.layers.Dense(1, activation='sigmoid')
+    ])
+    """
 
     # compile the model
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', precision_m, recall_m, f1_m])
     model.summary()
 
     # train the model
-    num_epoch = 60
+    num_epoch = 15
     history = model.fit(X_train, Y_train, epochs=num_epoch, validation_data=(X_test, Y_test))
+
+    # visualize the training history
+    plt.plot(history.history['accuracy'])
+    plt.plot(history.history['val_accuracy'])
+    plt.title("Model Accuracy")
+    plt.xlabel("Epoch")
+    plt.ylabel("Accuracy")
+    plt.legend(["Train", "Test"], loc='upper left')
+    plt.show()
+
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('Model Loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
+    plt.show()
 
     # get the dictionary of words and frequencies in the corpus
     word_index = trained_tokenizer.word_index

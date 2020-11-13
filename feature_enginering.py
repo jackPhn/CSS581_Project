@@ -1,5 +1,5 @@
 import nltk
-nltk.download('stopwords')
+#nltk.download('stopwords')
 from nltk.corpus import stopwords
 import gensim
 import pandas as pd
