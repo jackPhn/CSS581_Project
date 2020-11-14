@@ -24,7 +24,8 @@ from data_exploration import (
 from model_building import (
     classical_models,
     make_prediction,
-    deep_learning_model
+    deep_learning_model,
+    none_dl_grid_search
 )
 
 
@@ -106,7 +107,7 @@ def main():
     # -------------------------------------------------
 
     # LSTM and RNN
-    # df_clean, stop_words = process_feature_enginering(news_df)
+    # df_clean, stop_words = process_feature_engineering(news_df)
     # visualize_fake_word_cloud_plot(df_clean, stop_words)
     # visualize_ligit_word_cloud_plot(df_clean, stop_words)
 
@@ -115,24 +116,39 @@ def main():
     # shuffle the dataset
     # This part will take a significant amount of time to run, comment out if not needed
     news_df = news_df.sample(frac=1, random_state=1).reset_index(drop=True)
+
+    """
+    # using grid search to find the best parameters for several models
+    print()
+    print("Performing grid search for non-deep-learning models")
+    none_dl_grid_search(news_df)
+
+    # cross validation and training
+    print("Performing cross validation and training models")
     classic_pack = classical_models(news_df)
 
+    
     # change the file path below to the absolute file path of a sample used to make prediction on
     sample_file_path = "/Users/jack/programming/machine_learning/CSS581_Project_Repo/CSS581_Project/fakeNewsDatasets/fakeNewsDataset/fake/tech008.fake.txt"
 
     # make a prediction
     print()
-    make_prediction(classic_pack, sample_file_path, "Logistic Regression")
+    model_name = "Logistic Regression"
+    print("Making a prediction with", model_name)
+    make_prediction(classic_pack, sample_file_path, model_name)
 
     # -------------------------------------------------------------------------------------------------
     # deep learning model with word embedding
-    #dl_pack = deep_learning_model(news_df)
+    print()
+    print("Evaluating and training a deep learning model")
+    dl_pack = deep_learning_model(news_df)
 
     # make a prediction
     # change the file path below to the absolute file path of a sample
-    #print()
-    #make_prediction(dl_pack, sample_file_path, "dl")
-
+    print()
+    print("Making a prediction with the deep learning model")
+    make_prediction(dl_pack, sample_file_path, "dl")
+    """
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':

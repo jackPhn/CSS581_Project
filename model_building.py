@@ -4,40 +4,31 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import (
     train_test_split,
-    StratifiedKFold
+    StratifiedKFold,
+    GridSearchCV
 )
-#from sklearn.feature_extraction.text import (
-#    CountVectorizer,
-#    TfidfVectorizer
-#)
+
 from sklearn.metrics import (
     accuracy_score,
     precision_score,
     f1_score,
     recall_score,
-    roc_curve,
     roc_auc_score,
-)
-from tensorflow.python.keras.layers import Embedding, LSTM
-
-from keras_evaluation_metrics import(
-    precision_m,
-    recall_m,
-    f1_m
+    roc_curve
 )
 
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from xgboost import XGBClassifier
-
 
 import tensorflow as tf
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from keras.models import Sequential
-from tensorflow.keras.layers import Embedding, Bidirectional, Dense
+from tensorflow.keras.layers import Embedding, Bidirectional, Dense, LSTM
 
 from feature_engineering import (
     tfidf_transform,
@@ -46,6 +37,13 @@ from feature_engineering import (
     tokenize_words
 )
 
+from keras_evaluation_metrics import(
+    precision_m,
+    recall_m,
+    f1_m
+)
+
+from tensorboard.plugins.hparams import api as hp  # for hyperparameter tuning
 
 def evaluate(fit, X_test, Y_test):
     """
@@ -114,10 +112,74 @@ def cross_validate(model, features, labels):
     return metrics_df
 
 
+def none_dl_grid_search(df):
+    """
+    Using grid search to find the best model and hyperparameters
+    :param df: raw data frame
+    :return:
+    """
+    # extract data
+    X = df[['Title', 'Content']].values
+    Y = df['is_fake'].values
+    labels = Y.astype('int')
+
+    # extract the features from the data frame
+    feature_pack = extract_features(X)
+    features = feature_pack['features']
+
+    # create models and parameters
+    model_params = {
+        'Logistic Regression': {
+            'model': LogisticRegression(n_jobs=8),
+            'params': {
+                'C': [1, 5, 10]
+            }
+        },
+        'Random Forest': {
+            'model': RandomForestClassifier(),
+            'params': {
+                'n_estimators': [1, 5, 10]
+            }
+        },
+        'SVM': {
+            'model': SVC(gamma='auto'),
+            'params': {
+                'C': [1, 5, 10],
+                'kernel': ['rbf', 'linear', 'poly']
+            }
+        },
+        'XGBoost': {
+            'model': XGBClassifier(n_jobs=8),
+            'params': {
+                'n_estimators': [1, 5, 10]
+            }
+        }
+    }
+
+    # list of scores
+    scores = []
+
+    # iterate over the models
+    for model_name, mp in model_params.items():
+        clf = GridSearchCV(mp['model'], mp['params'], cv=5, return_train_score=False)
+        clf.fit(features, labels)
+        scores.append({
+            'model': model_name,
+            'best_params': clf.best_params_,
+            'best_score': clf.best_score_
+        })
+
+    # display the results
+    resultsDF = pd.DataFrame(scores, columns=['Model', 'Best Params', 'Best Score'])
+    print(resultsDF)
+    # save the results
+    resultsDF.to_csv('output/none_dl_grid_search_results.csv')
+
+
 def classical_models(df):
     """
     Build classical models and perform cross validation and evaluate the performance on test set
-    :param df: datafram of raw data
+    :param df: raw data frame
     :return: a dictionary of the trained models and features extracting transformers
     """
     # extract data
@@ -134,11 +196,11 @@ def classical_models(df):
 
     # model
     models = {
-        "Logistic Regression": LogisticRegression()
+        #"Logistic Regression": LogisticRegression(),
         #"Decision Tree": DecisionTreeClassifier(),
         #"Gaussian NB": GaussianNB(),
-        #"XGBoost": XGBClassifier(),
-        #"SVM": SVC(gamma='auto', kernel='poly', probability=True)
+        #"XGBoost": XGBClassifier(n_jobs=8)
+        "SVM": SVC(gamma='auto', kernel='poly', probability=True)
     }
 
     # create a data frame to store validation metrics and test metrics
@@ -236,8 +298,7 @@ def deep_learning_model(df):
     # split the dataset
     X_train, X_test, Y_train, Y_test = train_test_split(features, labels, test_size=0.2, random_state=0, stratify=Y)
 
-    # build the model
-
+    # neural network
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
         tf.keras.layers.GlobalAveragePooling1D(),
@@ -245,16 +306,20 @@ def deep_learning_model(df):
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
     """
+    # LSTM model
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
-        tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Conv1D(64, 5, activation='relu'),
         tf.keras.layers.MaxPool1D(),
         tf.keras.layers.LSTM(20, return_sequences=True),
-        tf.keras.layers.LSTM(20),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dense(512),
+        tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dense(256),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
     
+    # LSTM model
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
         tf.keras.layers.Dropout(0.2),
@@ -266,6 +331,17 @@ def deep_learning_model(df):
         tf.keras.layers.Dense(512),
         tf.keras.layers.Dropout(0.3),
         tf.keras.layers.Dense(256),
+        tf.keras.layers.Dense(1, activation='sigmoid')
+    ])
+    
+    # GRU model
+    model = tf.keras.Sequential([
+        tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
+        tf.keras.layers.GRU(units=120, dropout=0.2, recurrent_dropout=0.2, 
+                            recurrent_activation='relu', activation='relu'),
+        tf.keras.layers.Dropout(rate=0.4),
+        tf.keras.layers.Dense(120, activation='relu'),
+        tf.keras.layers.Dropout(rate=0.2),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
     """
@@ -310,6 +386,40 @@ def deep_learning_model(df):
         "embedding_dim": embedding_dim,
         "max_length": max_length
     }
+
+
+def tune_hyperparameters(df):
+    """
+    Tune hyperparameters to select deep learning model
+    :param df: input data frame containing raw data
+    :return:
+    """
+    # setup hyperparameter experiment
+    HP_NUM_UNIT1 = hp.HParam('num units 1', hp.Discrete([4, 8, 16]))
+    HP_NUM_UNIT2 = hp.HParam('num units 2', hp.Discrete([4, 8]))
+    HP_DROPOUT = hp.HParam('dropout', hp.RealInterval(0.2, 0.5))
+    HP_OPTIMIZER = hp.HParam('optimizer', hp.Discrete(['adam', 'sgd', 'RMSprop']))
+    METRIC_ACCURACY = 'accuracy'
+
+    with tf.summary.create_file_writer('output/hparam_tuning').as_default():
+        hp.hparams_config(
+            hparams=[HP_NUM_UNIT1, HP_NUM_UNIT2, HP_DROPOUT, HP_OPTIMIZER],
+            metrics=[hp.Metric(METRIC_ACCURACY, display_name='Accuracy')]
+        )
+
+    vocab_size = 3000  # 19885 # max number of words possible in Tokenizer
+    embedding_dim = 100
+    max_length = 200
+    """
+    # neural network
+    model = tf.keras.Sequential([
+        tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
+        tf.keras.layers.GlobalAveragePooling1D(),
+        tf.keras.layers.Dense(10, activation='relu'),
+        tf.keras.layers.Dense(1, activation='sigmoid')
+    ])
+    
+    model.compile(optimizer=hparams[HP_OPTIMIZER]) """
 
 
 def make_prediction(model_pack, file_path: str, model_name: str):
@@ -364,6 +474,7 @@ def make_prediction(model_pack, file_path: str, model_name: str):
     else:
         print("This is legit news")
 
+
 def create_pad_sequence(df, total_words, maxlen):
     x_train, x_test, y_train, y_test = train_test_split(df.clean_joined, df.is_fake, test_size=0.2)
     tokenizer = Tokenizer(new_words=total_words)
@@ -374,6 +485,7 @@ def create_pad_sequence(df, total_words, maxlen):
     test_sequences = tokenizer.texts_to_sequences(x_train)
     pad_train = pad_sequences(train_sequences, maxlen=maxlen, padding='post', truncating='post')
     pad_test = pad_sequences(test_sequences, maxlen=maxlen, padding='post', truncating='post')
+
 
 def build_ltsm_model(padded_train, total_words, y_train):
     # create sequential model
@@ -396,6 +508,7 @@ def build_ltsm_model(padded_train, total_words, y_train):
     print(model.fit(padded_train, y_train, batch_size=64, validation_split=0.1,epochs=2))
 
     return model
+
 
 def predict_stml_model(model, padded_test, y_test):
     pred = model.predict(padded_test)

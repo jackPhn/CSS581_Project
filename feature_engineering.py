@@ -111,17 +111,18 @@ def tfidf_transform(raw_data, tfidf_vectorizer=None):
     return mat, tfidf_vectorizer
 
 
-def vectorize_ngrams(raw_data, cv_ngram=None):
+def vectorize_ngrams(raw_data, gram_range, cv_ngram=None):
     """
     Helper function to convert raw data of text into matrix of ngram counts
     :param raw_data: raw text data
+    :param gram_range: tuple of the ngram number
     :param cv_ngram: Scikit-Learn CountVectorizer
     :return: ngram count matrix and the CountVectorizer used
     """
     if cv_ngram is None:
         # count vectorizer
         # convert all words to lower case letters
-        cv_ngram = CountVectorizer(analyzer='word', ngram_range=(3, 3), lowercase=True)
+        cv_ngram = CountVectorizer(analyzer='word', ngram_range=gram_range, lowercase=True)
         # convert the input text data to a matrix of token counts
         mat = cv_ngram.fit_transform(raw_data).todense()
     else:
@@ -143,7 +144,7 @@ def extract_features(X):
     mat_content, tfidf_content = tfidf_transform(X[:, 1])
 
     # count ngrams in the contents
-    mat_ngram, cv_ngram = vectorize_ngrams(X[:, 1])
+    mat_ngram, cv_ngram = vectorize_ngrams(X[:, 1], (3, 3))
 
     X_mat = np.hstack((mat_title, mat_content, mat_ngram))
 
