@@ -6,10 +6,10 @@ from sklearn.model_selection import (
     train_test_split,
     StratifiedKFold
 )
-from sklearn.feature_extraction.text import (
-    CountVectorizer,
-    TfidfVectorizer
-)
+#from sklearn.feature_extraction.text import (
+#    CountVectorizer,
+#    TfidfVectorizer
+#)
 from sklearn.metrics import (
     accuracy_score,
     precision_score,
@@ -29,97 +29,22 @@ from keras_evaluation_metrics import(
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
 from xgboost import XGBClassifier
+
 
 import tensorflow as tf
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from keras.models import Sequential
-from tensorflow.keras.layers import Embedding,Bidirectional,Dense
+from tensorflow.keras.layers import Embedding, Bidirectional, Dense
 
-
-def tfidf_transform(raw_data, tfidf_vectorizer=None):
-    """
-    Helper function to convert raw data of text into tf-idf matrix
-    :param raw_data: raw text data
-    :param tfidf_vectorizer: tfidf vectorizer from Scikit-Learn
-    :return: tf-idf matrix and reference to the tf-idf vectorizer used
-    """
-    # tf-idf transformer
-    if tfidf_vectorizer is None:
-        tfidf_vectorizer = TfidfVectorizer(lowercase=True, smooth_idf=True)
-        mat = tfidf_vectorizer.fit_transform(raw_data).todense()
-    else:
-        mat = tfidf_vectorizer.transform(raw_data).todense()
-
-    return mat, tfidf_vectorizer
-
-
-def ngram_vectorize(raw_data, cv_ngram=None):
-    """
-    Helper function to convert raw data of text into matrix of ngram counts
-    :param raw_data: raw text data
-    :param cv_ngram: Scikit-Learn CountVectorizer
-    :return: ngram count matrix and the CountVectorizer used
-    """
-    if cv_ngram is None:
-        # count vectorizer
-        # convert all words to lower case letters
-        cv_ngram = CountVectorizer(analyzer='word', ngram_range=(3, 3), lowercase=True)
-        # convert the input text data to a matrix of token counts
-        mat = cv_ngram.fit_transform(raw_data).todense()
-    else:
-        mat = cv_ngram.transform(raw_data).todense()
-
-    return mat, cv_ngram
-
-
-def feature_extract(X):
-    """
-    Extract features from news titles and contents
-    :param df: two-column matrix of features (Title and Content)
-    :return: feature matrix and feature extracting transformers
-    """
-    # Convert the titles to Tf-iDF matrix
-    mat_title, tfidf_title = tfidf_transform(X[:, 0])
-
-    # Convert the contents to Tf-iDF matrix
-    mat_content, tfidf_content = tfidf_transform(X[:, 1])
-
-    # count ngrams in the contents
-    mat_ngram, cv_ngram = ngram_vectorize(X[:, 1])
-
-    X_mat = np.hstack((mat_title, mat_content, mat_ngram))
-
-    return {
-        "cv_ngram": cv_ngram,
-        "tfidf_content": tfidf_content,
-        "tfidf_title": tfidf_title,
-        "features": X_mat
-    }
-
-
-def word_tokenize(raw_data, vocab_size, max_length, tokenizer=None):
-    """
-    Tokenize words
-    :param raw_data:    input list of texts
-    :param vocab_size:  size of the vocabulary
-    :param max_length:  maximum length of an input sequence
-    :param tokenizer:   a trained tokenizer. Create a new one if none
-    :return:            list of tokenized input texts and trained tokenizer
-    """
-    trunc_type = 'post'
-    padding_type = 'post'
-    oov_tok = "<OOV>"
-
-    if tokenizer is None:
-        tokenizer = Tokenizer(num_words=vocab_size, oov_token=oov_tok)
-        tokenizer.fit_on_texts(raw_data)
-
-    sequences = tokenizer.texts_to_sequences(raw_data)
-    padded = pad_sequences(sequences, maxlen=max_length, padding=padding_type, truncating=trunc_type)
-
-    return padded, tokenizer
+from feature_engineering import (
+    tfidf_transform,
+    vectorize_ngrams,
+    extract_features,
+    tokenize_words
+)
 
 
 def evaluate(fit, X_test, Y_test):
@@ -201,7 +126,7 @@ def classical_models(df):
     labels = Y.astype('int')
 
     # extract the features from the data frame
-    feature_pack = feature_extract(X)
+    feature_pack = extract_features(X)
     features = feature_pack['features']
 
     # split the dataset 80 / 20 for train and test
@@ -212,7 +137,8 @@ def classical_models(df):
         "Logistic Regression": LogisticRegression()
         #"Decision Tree": DecisionTreeClassifier(),
         #"Gaussian NB": GaussianNB(),
-        #"XGBoost": XGBClassifier()
+        #"XGBoost": XGBClassifier(),
+        #"SVM": SVC(gamma='auto', kernel='poly', probability=True)
     }
 
     # create a data frame to store validation metrics and test metrics
@@ -265,6 +191,30 @@ def classical_models(df):
     }
 
 
+def visualize_dl_training(history):
+    """
+    Draw plot of the training history for a deep learning model
+    :param history: history object of the training
+    :return: none
+    """
+    # visualize the training history
+    plt.plot(history.history['accuracy'])
+    plt.plot(history.history['val_accuracy'])
+    plt.title("Model Accuracy")
+    plt.xlabel("Epoch")
+    plt.ylabel("Accuracy")
+    plt.legend(["Train", "Test"], loc='upper left')
+    plt.show()
+
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('Model Loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
+    plt.show()
+
+
 def deep_learning_model(df):
     """
     Build a deep learning model
@@ -281,13 +231,13 @@ def deep_learning_model(df):
     labels = Y.astype('int')
 
     # tokenize the words
-    features, trained_tokenizer = word_tokenize(raw_data=X[:, 1], vocab_size=vocab_size, max_length=max_length)
+    features, trained_tokenizer = tokenize_words(raw_data=X[:, 1], vocab_size=vocab_size, max_length=max_length)
 
     # split the dataset
     X_train, X_test, Y_train, Y_test = train_test_split(features, labels, test_size=0.2, random_state=0, stratify=Y)
 
     # build the model
-    """
+
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
         tf.keras.layers.GlobalAveragePooling1D(),
@@ -304,7 +254,7 @@ def deep_learning_model(df):
         tf.keras.layers.LSTM(20),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
-    """
+    
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
         tf.keras.layers.Dropout(0.2),
@@ -325,25 +275,11 @@ def deep_learning_model(df):
     model.summary()
 
     # train the model
-    num_epoch = 15
+    num_epoch = 20
     history = model.fit(X_train, Y_train, epochs=num_epoch, validation_data=(X_test, Y_test))
 
     # visualize the training history
-    plt.plot(history.history['accuracy'])
-    plt.plot(history.history['val_accuracy'])
-    plt.title("Model Accuracy")
-    plt.xlabel("Epoch")
-    plt.ylabel("Accuracy")
-    plt.legend(["Train", "Test"], loc='upper left')
-    plt.show()
-
-    plt.plot(history.history['loss'])
-    plt.plot(history.history['val_loss'])
-    plt.title('Model Loss')
-    plt.ylabel('Loss')
-    plt.xlabel('Epoch')
-    plt.legend(['Train', 'Test'], loc='upper left')
-    plt.show()
+    visualize_dl_training(history)
 
     # get the dictionary of words and frequencies in the corpus
     word_index = trained_tokenizer.word_index
@@ -404,7 +340,7 @@ def make_prediction(model_pack, file_path: str, model_name: str):
         trained_tokenizer = model_pack['tokenizer']
         vocab_size = model_pack['vocab_size']
         max_length = model_pack['max_length']
-        sample, _ = word_tokenize(content, vocab_size, max_length, trained_tokenizer)
+        sample, _ = tokenize_words(content, vocab_size, max_length, trained_tokenizer)
     else:
         # other classical models
         models = model_pack['models']
@@ -416,7 +352,7 @@ def make_prediction(model_pack, file_path: str, model_name: str):
         # extract features
         mat_title, _ = tfidf_transform(raw_data=title, tfidf_vectorizer=tfidf_title)
         mat_content, _ = tfidf_transform(raw_data=content, tfidf_vectorizer=tfidf_content)
-        mat_ngram, _ = ngram_vectorize(raw_data=content, cv_ngram=cv_ngram)
+        mat_ngram, _ = vectorize_ngrams(raw_data=content, cv_ngram=cv_ngram)
         sample = np.hstack((mat_title, mat_content, mat_ngram))
 
     # make prediction
