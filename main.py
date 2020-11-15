@@ -15,9 +15,11 @@ from data_exploration import (
 from model_building import (
     classical_models,
     make_prediction,
-    deep_learning_model,
+    deep_learning_model
+)
+from hyperparameter_tuning import (
     none_dl_grid_search,
-    hyperparameter_tuning
+    dl_grid_search
 )
 
 
@@ -111,7 +113,7 @@ def main():
 
 
     # using grid search to find the best parameters for several models
-    print()
+    #print()
     #print("Performing grid search for non-deep-learning models")
     #none_dl_grid_search(news_df)
 
@@ -143,7 +145,7 @@ def main():
     make_prediction(dl_pack, sample_file_path, "dl")
     """
     # hyperparameter tuning for deep learning model
-    hyperparameter_tuning(news_df)
+    dl_grid_search(news_df)
 
 
 # Press the green button in the gutter to run the script.

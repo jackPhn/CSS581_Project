@@ -4,8 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import (
     train_test_split,
-    StratifiedKFold,
-    GridSearchCV
+    StratifiedKFold
 )
 
 from sklearn.metrics import (
@@ -42,8 +41,6 @@ from keras_evaluation_metrics import(
     recall_m,
     f1_m
 )
-
-from tensorboard.plugins.hparams import api as hp  # for hyperparameter tuning
 
 def evaluate(fit, X_test, Y_test):
     """
@@ -385,84 +382,9 @@ def deep_learning_model(df):
     }
 
 
-# setup hyperparameter experiment
-HP_NUM_UNITS = hp.HParam('num units', hp.Discrete([4, 8, 16]))
-HP_DROPOUT = hp.HParam('dropout', hp.RealInterval(0.2, 0.5))
-HP_OPTIMIZER = hp.HParam('optimizer', hp.Discrete(['adam', 'sgd', 'RMSprop']))
-METRIC_ACCURACY = 'accuracy'
-
-with tf.summary.create_file_writer('output/hparam_tuning').as_default():
-    hp.hparams_config(
-        hparams=[HP_NUM_UNITS, HP_DROPOUT, HP_OPTIMIZER],
-        metrics=[hp.Metric(METRIC_ACCURACY, display_name='Accuracy')]
-    )
-
-
-def train_test_model(df, hparams):
-    vocab_size = 3000  # 19885 # max number of words possible in Tokenizer
-    embedding_dim = 100
-    max_length = 200
-
-    # extract data
-    X = df[['Title', 'Content']].values
-    Y = df['is_fake'].values
-    labels = Y.astype('int')
-
-    # tokenize the words
-    features, trained_tokenizer = tokenize_words(raw_data=X[:, 1], vocab_size=vocab_size, max_length=max_length)
-
-    # split the dataset
-    X_train, X_test, Y_train, Y_test = train_test_split(features, labels, test_size=0.2, random_state=0, stratify=Y)
-
-    # neural network
-    model = tf.keras.Sequential([
-        tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
-        tf.keras.layers.GlobalAveragePooling1D(),
-        tf.keras.layers.Dense(hparams[HP_NUM_UNITS], activation='relu'),
-        tf.keras.layers.Dropout(hparams[HP_DROPOUT]),
-        tf.keras.layers.Dense(1, activation='sigmoid')
-    ])
-
-    model.compile(optimizer=hparams[HP_OPTIMIZER], loss='binary_crossentropy', metrics=['accuracy'])
-
-    model.fit(X_train, Y_train, epochs=1)
-    _, accuracy = model.evaluate(X_test, Y_test)
-    return accuracy
-
-
-def run(run_dir, hparams, df):
-    with tf.summary.create_file_writer(run_dir).as_default():
-        hp.hparams(hparams)  # record the values used in this trial
-        accuracy = train_test_model(df, hparams)
-        tf.summary.scalar(METRIC_ACCURACY, accuracy, step=1)
-
-
-def hyperparameter_tuning(df):
-    """
-    Tune hyperparameters to select deep learning model
-    :param df: input data frame containing raw data
-    :return:
-    """
-    session_num = 0
-
-    for num_units in HP_NUM_UNITS.domain.values:
-        for dropout_rate in (HP_DROPOUT.domain.min_value, HP_DROPOUT.domain.max_value):
-            for optimizer in HP_OPTIMIZER.domain.values:
-                hparams = {
-                    HP_NUM_UNITS: num_units,
-                    HP_DROPOUT: dropout_rate,
-                    HP_OPTIMIZER: optimizer,
-                }
-                run_name = "run-%d" % session_num
-                print('--- Starting trial: %s' % run_name)
-                print({h.name: hparams[h] for h in hparams})
-                run('output/hparam_tuning/' + run_name, hparams, df)
-                session_num += 1
-
-
 def make_prediction(model_pack, file_path: str, model_name: str):
     """
-    Make prediction for a single news file
+    Make prediction for a single file of news
     :param model_pack: contained model weights and feature extracting transformers
     :param file_path: full file system path to the .txt file containing the news
     :param model_name: name of the model to use
