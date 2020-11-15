@@ -3,19 +3,10 @@ import pandas as pd
 
 from data_compilation import (
     build_real_news_dataframe,
-    build_fake_news_dataframe,
-    concatenet_dataframes
+    build_fake_news_dataframe
 )
 
 from data_exploration import (
-    # claim_version_combine,
-    # news_version_combine,
-    # tweets_version_combine,
-    # retweets_version_combine,
-    # merge_main_content_tweets,
-    # merge_main_content_retweets,
-    # claim_preprocess,
-    # news_preprocess,
     validate_null_value,
     validate_unique_recored,
     ngram_frequency,
@@ -25,7 +16,8 @@ from model_building import (
     classical_models,
     make_prediction,
     deep_learning_model,
-    none_dl_grid_search
+    none_dl_grid_search,
+    hyperparameter_tuning
 )
 
 
@@ -46,7 +38,7 @@ def main():
     # data loading
     real_news_df = build_real_news_dataframe(include_celeb=True)
     fake_news_df = build_fake_news_dataframe(include_celeb=True)
-    news_df = concatenet_dataframes(real_news_df, fake_news_df)
+    news_df = pd.concat([real_news_df, fake_news_df])
 
     # find the longest news content
     news_length = [len(news) for news in news_df['Content'].tolist()]
@@ -117,12 +109,13 @@ def main():
     # This part will take a significant amount of time to run, comment out if not needed
     news_df = news_df.sample(frac=1, random_state=1).reset_index(drop=True)
 
-    """
+
     # using grid search to find the best parameters for several models
     print()
-    print("Performing grid search for non-deep-learning models")
-    none_dl_grid_search(news_df)
+    #print("Performing grid search for non-deep-learning models")
+    #none_dl_grid_search(news_df)
 
+    """
     # cross validation and training
     print("Performing cross validation and training models")
     classic_pack = classical_models(news_df)
@@ -136,7 +129,7 @@ def main():
     model_name = "Logistic Regression"
     print("Making a prediction with", model_name)
     make_prediction(classic_pack, sample_file_path, model_name)
-
+    
     # -------------------------------------------------------------------------------------------------
     # deep learning model with word embedding
     print()
@@ -149,6 +142,9 @@ def main():
     print("Making a prediction with the deep learning model")
     make_prediction(dl_pack, sample_file_path, "dl")
     """
+    # hyperparameter tuning for deep learning model
+    hyperparameter_tuning(news_df)
+
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
