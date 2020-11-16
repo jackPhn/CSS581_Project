@@ -6,13 +6,14 @@ import pandas as pd
 import numpy as np
 from tabulate import tabulate
 
-
 stop_words = []
 
 def process_feature_enginering(df):
     df_original = combine_two_columns(df, 'Title', 'Content', 'original')
     df_clean, stop_words = remove_stop_words(df_original)
-    return df_clean, stop_words
+    total_words = find_total_words(df_clean)
+    token_maxlen = find_max_token_length(df_clean)
+    return df_clean, stop_words, total_words, token_maxlen
 
 
 def combine_two_columns(df, first_column, second_column, new_column):
@@ -35,13 +36,10 @@ def remove_stop_words(df):
     '''
     stop_words = stopwords.words('english')
     stop_words.extend(['lot', 'close', 'her', 'to', 'for', 'with', 'and'])
-    df['clean'] = df['original'].apply(preprocess_stop_word)
+    df['clean'] = df['original'].apply(preprocess_stop_words)
     df['clean_joined'] = df['clean'].apply(lambda x: " ".join(x))
     print(tabulate(df.head(5), headers='keys', tablefmt='psql'))
     print(df.shape)
-    '''
-    
-    '''
     return df, stop_words
 
 # find the total list of words excluding stop words and redundent words
@@ -57,7 +55,8 @@ def find_total_words(df):
     total_words = len(list(set(list_of_words)))
     return total_words
 
-def preprocess_stop_word(text):
+# parse each word into token and select the one gratore than 3 charactor
+def preprocess_stop_words(text):
     '''
     :param text: text to be processed
     :param stop_words: list of stop words

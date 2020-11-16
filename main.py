@@ -24,7 +24,10 @@ from data_exploration import (
 from model_building import (
     classical_models,
     make_prediction,
-    deep_learning_with_embedding
+    deep_learning_with_embedding,
+    create_pad_sequence,
+    build_lstm_model,
+    predict_lstm_model,
 )
 
 
@@ -34,6 +37,8 @@ from data_visualization import (
     visualize_fake_word_cloud_plot,
     visulaize_fake_ligit,
     visualize_ligit_word_cloud_plot,
+    visualize_word_distribution,
+    visualize_confusion_matrix,
 )
 
 from feature_enginering import(
@@ -106,23 +111,28 @@ def main():
     # -------------------------------------------------
 
     # LSTM and RNN
-    # df_clean, stop_words = process_feature_enginering(news_df)
+    df_clean, stop_words, total_words, token_maxlen = process_feature_enginering(news_df)
     # visualize_fake_word_cloud_plot(df_clean, stop_words)
     # visualize_ligit_word_cloud_plot(df_clean, stop_words)
+    padded_train, padded_test, y_train, y_test = create_pad_sequence(df_clean,total_words, token_maxlen)
+    model = build_lstm_model(padded_train,total_words, y_train)
+    prediction = predict_lstm_model(model, padded_test,y_test)
+    visualize_confusion_matrix(prediction, y_test)
+
 
     # -------------------------------------------------------------------------------------------------
     # classical models
     # shuffle the dataset
     # This part will take a significant amount of time to run, comment out if not needed
-    news_df = news_df.sample(frac=1, random_state=1).reset_index(drop=True)
-    classic_pack = classical_models(news_df)
+    # news_df = news_df.sample(frac=1, random_state=1).reset_index(drop=True)
+    # classic_pack = classical_models(news_df)
 
     # change the file path below to the absolute file path of a sample used to make prediction on
-    sample_file_path = "/Users/jack/programming/machine_learning/CSS581_Project_Repo/CSS581_Project/fakeNewsDatasets/fakeNewsDataset/fake/tech008.fake.txt"
+    # sample_file_path = "/Users/jack/programming/machine_learning/CSS581_Project_Repo/CSS581_Project/fakeNewsDatasets/fakeNewsDataset/fake/tech008.fake.txt"
 
     # make a prediction
     print()
-    make_prediction(classic_pack, sample_file_path, "Logistic Regression")
+    # make_prediction(classic_pack, sample_file_path, "Logistic Regression")
 
     # -------------------------------------------------------------------------------------------------
     # deep learning model with word embedding
@@ -131,7 +141,7 @@ def main():
     # make a prediction
     # change the file path below to the absolute file path of a sample
     print()
-    make_prediction(dl_pack, sample_file_path, "dl")
+    # make_prediction(dl_pack, sample_file_path, "dl")
 
 
 # Press the green button in the gutter to run the script.

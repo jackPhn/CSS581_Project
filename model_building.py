@@ -33,7 +33,7 @@ from xgboost import XGBClassifier
 import tensorflow as tf
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-from keras.models import Sequential
+from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Embedding,Bidirectional,Dense
 
 
@@ -386,43 +386,56 @@ def make_prediction(model_pack, file_path: str, model_name: str):
 
 def create_pad_sequence(df, total_words, maxlen):
     x_train, x_test, y_train, y_test = train_test_split(df.clean_joined, df.is_fake, test_size=0.2)
-    tokenizer = Tokenizer(new_words=total_words)
+    print(x_train)
+    tokenizer = Tokenizer(num_words=total_words)
     # update internal vocabulary based on a list of tests
     tokenizer.fit_on_texts(x_train)
     # transformation each text into a sequences integer
     train_sequences = tokenizer.texts_to_sequences(x_train)
-    test_sequences = tokenizer.texts_to_sequences(x_train)
-    pad_train = pad_sequences(train_sequences, maxlen=maxlen, padding='post', truncating='post')
-    pad_test = pad_sequences(test_sequences, maxlen=maxlen, padding='post', truncating='post')
 
-def build_ltsm_model(padded_train, total_words, y_train):
-    # create sequential model
+    print(train_sequences)
+    test_sequences = tokenizer.texts_to_sequences(x_test)
+    # sentence length maxlength = 100
+    padded_train = pad_sequences(train_sequences, maxlen=maxlen, padding='post', truncating='post')
+    padded_test = pad_sequences(test_sequences, maxlen=maxlen, padding='post', truncating='post')
+    # padded_train = pad_sequences(train_sequences, maxlen=1000, padding='post', truncating='post')
+    # padded_test = pad_sequences(test_sequences, maxlen=1000, padding='post', truncating='post')
+    return padded_train, padded_test, y_train, x_test
+
+def build_lstm_model(padded_train, total_words, y_train):
+    print("start modeling")
+    # intialize sequential model
     model = Sequential()
 
     # embedding layer
-    model.add(Embedding(total_words, output_dim= 128))
+    # embedding_vector_feature = 40
+    # input_length = sent_length = 100
+    model.add(Embedding(total_words, output_dim= 240))
+    # model.add(Embedding(1000, output_dim=128))
 
     # Bi-directional RNN/LSTM
-    model.add(Bidirectional (LSTM(128)))
+    model.add(Bidirectional(LSTM(128)))
 
     #Dense layers
     model.add(Dense(128, activation='relu'))
     model.add(Dense(1,activation='sigmoid'))
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
     model.summary()
-    y_train = np.asarray(y_train)
 
+    y_train = np.asarray(y_train)
     # train the model
-    print(model.fit(padded_train, y_train, batch_size=64, validation_split=0.1,epochs=2))
+    model.fit(padded_train, y_train, batch_size=64, validation_split=0.1,epochs=2)
+    print("finish modeling")
 
     return model
 
-def predict_stml_model(model, padded_test, y_test):
+def predict_lstm_model(model, padded_test, y_test):
+    print("start prediction")
     pred = model.predict(padded_test)
     prediction = []
     # if the predicted value is > 0.5 it is real else it is fake
     for i in range(len(pred)):
-        if pred[i].items > 0.5:
+        if pred[i] > 0.5:
             prediction.append(1)
         else:
             prediction.append(0)
