@@ -4,7 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import (
     train_test_split,
-    StratifiedKFold
+    StratifiedKFold,
+    GridSearchCV
 )
 
 from sklearn.metrics import (
@@ -475,7 +476,7 @@ def predict_stml_model(model, padded_test, y_test):
     prediction = []
     # if the predicted value is > 0.5 it is real else it is fake
     for i in range(len(pred)):
-        if pred[i].items > 0.5:
+        if pred[i] > 0.5:
             prediction.append(1)
         else:
             prediction.append(0)

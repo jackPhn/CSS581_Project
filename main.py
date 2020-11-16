@@ -17,8 +17,8 @@ from model_building import (
     make_prediction,
     deep_learning_model,
     create_pad_sequence,
-    build_lstm_model,
-    predict_lstm_model
+    predict_stml_model,
+    build_ltsm_model
 )
 from hyperparameter_tuning import (
     none_dl_grid_search,
@@ -116,23 +116,38 @@ def main():
     # shuffle the dataset
     # This part will take a significant amount of time to run, comment out if not needed
     news_df = news_df.sample(frac=1, random_state=1).reset_index(drop=True)
+
+    # using grid search to find the best parameters for several models
+    # print()
+    # print("Performing grid search for non-deep-learning models")
+    # none_dl_grid_search(news_df)
+
+    """
+    # cross validation and training
+    print("Performing cross validation and training models")
     classic_pack = classical_models(news_df)
 
     # change the file path below to the absolute file path of a sample used to make prediction on
     sample_file_path = "/Users/jack/programming/machine_learning/CSS581_Project_Repo/CSS581_Project/fakeNewsDatasets/fakeNewsDataset/fake/tech008.fake.txt"
-
     # make a prediction
     print()
-    make_prediction(classic_pack, sample_file_path, "Logistic Regression")
+    model_name = "Logistic Regression"
+    print("Making a prediction with", model_name)
+    make_prediction(classic_pack, sample_file_path, model_name)
 
     # -------------------------------------------------------------------------------------------------
     # deep learning model with word embedding
-    dl_pack = deep_learning_with_embedding(news_df)
-
+    print()
+    print("Evaluating and training a deep learning model")
+    dl_pack = deep_learning_model(news_df)
     # make a prediction
     # change the file path below to the absolute file path of a sample
     print()
+    print("Making a prediction with the deep learning model")
     make_prediction(dl_pack, sample_file_path, "dl")
+    """
+    # hyperparameter tuning for deep learning model
+    dl_grid_search(news_df)
 
 
 # Press the green button in the gutter to run the script.
