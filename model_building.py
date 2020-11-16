@@ -1,125 +1,46 @@
 import io
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from sklearn.model_selection import (
     train_test_split,
     StratifiedKFold
 )
-from sklearn.feature_extraction.text import (
-    CountVectorizer,
-    TfidfVectorizer
-)
+
 from sklearn.metrics import (
     accuracy_score,
     precision_score,
     f1_score,
     recall_score,
-    roc_curve,
     roc_auc_score,
+    roc_curve
 )
-from tensorflow.python.keras.layers import Embedding, LSTM
+
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
+from xgboost import XGBClassifier
+
+import tensorflow as tf
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from keras.models import Sequential
+from tensorflow.keras.layers import Embedding, Bidirectional, Dense, LSTM
+
+from feature_engineering import (
+    tfidf_transform,
+    vectorize_ngrams,
+    extract_features,
+    tokenize_words
+)
 
 from keras_evaluation_metrics import(
     precision_m,
     recall_m,
     f1_m
 )
-
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.naive_bayes import GaussianNB
-from sklearn.linear_model import LogisticRegression
-from xgboost import XGBClassifier
-
-import tensorflow as tf
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Embedding,Bidirectional,Dense
-
-
-def tfdif_transform(raw_data, tfidf_vectorizer=None):
-    """
-    Helper function to convert raw data of text into tf-idf matrix
-    :param raw_data: raw text data
-    :param tfidf_vectorizer: tfidf vectorizer from Scikit-Learn
-    :return: tf-idf matrix and reference to the tf-idf vectorizer used
-    """
-    # tf-idf transformer
-    if tfidf_vectorizer is None:
-        tfidf_vectorizer = TfidfVectorizer(lowercase=True, smooth_idf=True)
-        mat = tfidf_vectorizer.fit_transform(raw_data).todense()
-    else:
-        mat = tfidf_vectorizer.transform(raw_data).todense()
-
-    return mat, tfidf_vectorizer
-
-
-def ngram_vectorize(raw_data, cv_ngram=None):
-    """
-    Helper function to convert raw data of text into matrix of ngram counts
-    :param raw_data: raw text data
-    :param cv_ngram: Scikit-Learn CountVectorizer
-    :return: ngram count matrix and the CountVectorizer used
-    """
-    if cv_ngram is None:
-        # count vectorizer
-        # convert all words to lower case letters
-        cv_ngram = CountVectorizer(analyzer='word', ngram_range=(3, 3), lowercase=True)
-        # convert the input text data to a matrix of token counts
-        mat = cv_ngram.fit_transform(raw_data).todense()
-    else:
-        mat = cv_ngram.transform(raw_data).todense()
-
-    return mat, cv_ngram
-
-
-def feature_extract(X):
-    """
-    Extract features from news titles and contents
-    :param df: two-column matrix of features (Title and Content)
-    :return: feature matrix and feature extracting transformers
-    """
-    # Convert the titles to Tf-iDF matrix
-    mat_title, tfidf_title = tfdif_transform(X[:, 0])
-
-    # Convert the contents to Tf-iDF matrix
-    mat_content, tfidf_content = tfdif_transform(X[:, 1])
-
-    # count ngrams in the contents
-    mat_ngram, cv_ngram = ngram_vectorize(X[:, 1])
-
-    X_mat = np.hstack((mat_title, mat_content, mat_ngram))
-
-    return {
-        "cv_ngram": cv_ngram,
-        "tfidf_content": tfidf_content,
-        "tfidf_title": tfidf_title,
-        "features": X_mat
-    }
-
-
-def word_tokenize(raw_data, vocab_size, max_length, tokenizer=None):
-    """
-    Tokenize words
-    :param raw_data:    input list of texts
-    :param vocab_size:  size of the vocabulary
-    :param max_length:  maximum length of an input sequence
-    :param tokenizer:   a trained tokenizer. Create a new one if none
-    :return:            list of tokenized input texts and trained tokenizer
-    """
-    trunc_type = 'post'
-    padding_type = 'post'
-    oov_tok = "<OOV>"
-
-    if tokenizer is None:
-        tokenizer = Tokenizer(num_words=vocab_size, oov_token=oov_tok)
-        tokenizer.fit_on_texts(raw_data)
-
-    sequences = tokenizer.texts_to_sequences(raw_data)
-    padded = pad_sequences(sequences, maxlen=max_length, padding=padding_type, truncating=trunc_type)
-
-    return padded, tokenizer
-
 
 def evaluate(fit, X_test, Y_test):
     """
@@ -188,10 +109,70 @@ def cross_validate(model, features, labels):
     return metrics_df
 
 
+def none_dl_grid_search(df):
+    """
+    Using grid search to find the best model and hyperparameters
+    :param df: raw data frame
+    :return:
+    """
+    # extract data
+    X = df[['Title', 'Content']].values
+    Y = df['is_fake'].values
+    labels = Y.astype('int')
+
+    # extract the features from the data frame
+    feature_pack = extract_features(X)
+    features = feature_pack['features']
+
+    # create models and parameters
+    model_params = {
+        'Logistic Regression': {
+            'model': LogisticRegression(n_jobs=8),
+            'params': {
+                'C': [1, 5, 10]
+            }
+        },
+        'Random Forest': {
+            'model': RandomForestClassifier(),
+            'params': {
+                'n_estimators': [1, 5, 10]
+            }
+        },
+        'XGBoost': {
+            'model': XGBClassifier(n_jobs=8),
+            'params': {
+                'n_estimators': [1, 5, 10]
+            }
+        }
+    }
+
+    # list of scores
+    scores = []
+
+    # iterate over the models
+    for model_name, mp in model_params.items():
+        print("Working on", model_name)
+        clf = GridSearchCV(mp['model'], mp['params'], cv=5, return_train_score=False)
+        clf.fit(features, labels)
+        scores.append({
+            'model': model_name,
+            'best_params': clf.best_params_,
+            'best_score': clf.best_score_
+        })
+
+    # display the results
+    resultsDF = pd.DataFrame(scores)
+    resultsDF.columns = ['Model', 'Best Params', 'Best Score']
+    print(scores)
+    print(resultsDF)
+    # save the results
+    resultsDF.to_csv('output/none_dl_grid_search_results.csv')
+
+
 def classical_models(df):
     """
     Build classical models and perform cross validation and evaluate the performance on test set
-    :param df: datafram of raw data
+    :param df: raw data frame
     :return: a dictionary of the trained models and features extracting transformers
     """
     # extract data
@@ -200,7 +181,7 @@ def classical_models(df):
     labels = Y.astype('int')
 
     # extract the features from the data frame
-    feature_pack = feature_extract(X)
+    feature_pack = extract_features(X)
     features = feature_pack['features']
 
     # split the dataset 80 / 20 for train and test
@@ -208,10 +189,11 @@ def classical_models(df):
 
     # model
     models = {
-        "Logistic Regression": LogisticRegression()
+        #"Logistic Regression": LogisticRegression(),
         #"Decision Tree": DecisionTreeClassifier(),
         #"Gaussian NB": GaussianNB(),
-        #"XGBoost": XGBClassifier()
+        #"XGBoost": XGBClassifier(n_jobs=8)
+        "SVM": SVC(gamma='auto', kernel='poly', probability=True)
     }
 
     # create a data frame to store validation metrics and test metrics
@@ -223,6 +205,7 @@ def classical_models(df):
     trained_models = dict()
 
     for name, model in models.items():
+        print("Working on", name)
         # k-fold cross validation
         metrics_df = cross_validate(model, X_train, Y_train)
         validation_metrics_df[name] = metrics_df["Value"]
@@ -264,14 +247,38 @@ def classical_models(df):
     }
 
 
-def deep_learning_with_embedding(df):
+def visualize_dl_training(history):
+    """
+    Draw plot of the training history for a deep learning model
+    :param history: history object of the training
+    :return: none
+    """
+    # visualize the training history
+    plt.plot(history.history['accuracy'])
+    plt.plot(history.history['val_accuracy'])
+    plt.title("Model Accuracy")
+    plt.xlabel("Epoch")
+    plt.ylabel("Accuracy")
+    plt.legend(["Train", "Test"], loc='upper left')
+    plt.show()
+
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('Model Loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
+    plt.show()
+
+
+def deep_learning_model(df):
     """
     Build a deep learning model
     :param df: input data frame containing raw data
     :return: trained neural network
     """
-    vocab_size = 1000 #19885  # max number of words possible in Tokenizer
-    embedding_dim = 32
+    vocab_size = 3000   #19885 # max number of words possible in Tokenizer
+    embedding_dim = 100
     max_length = 200
 
     # extract data
@@ -280,26 +287,69 @@ def deep_learning_with_embedding(df):
     labels = Y.astype('int')
 
     # tokenize the words
-    features, trained_tokenizer = word_tokenize(raw_data=X[:, 1], vocab_size=vocab_size, max_length=max_length)
+    features, trained_tokenizer = tokenize_words(raw_data=X[:, 1], vocab_size=vocab_size, max_length=max_length)
 
     # split the dataset
     X_train, X_test, Y_train, Y_test = train_test_split(features, labels, test_size=0.2, random_state=0, stratify=Y)
 
-    # build the model
+    # neural network
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
         tf.keras.layers.GlobalAveragePooling1D(),
         tf.keras.layers.Dense(10, activation='relu'),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
+    """
+    # LSTM model
+    model = tf.keras.Sequential([
+        tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
+        tf.keras.layers.Conv1D(64, 5, activation='relu'),
+        tf.keras.layers.MaxPool1D(),
+        tf.keras.layers.LSTM(20, return_sequences=True),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dense(512),
+        tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dense(256),
+        tf.keras.layers.Dense(1, activation='sigmoid')
+    ])
+    
+    # LSTM model
+    model = tf.keras.Sequential([
+        tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Conv1D(64, 5, activation='relu'),
+        tf.keras.layers.MaxPool1D(),
+        tf.keras.layers.LSTM(20, return_sequences=True),
+        tf.keras.layers.LSTM(20),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dense(512),
+        tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dense(256),
+        tf.keras.layers.Dense(1, activation='sigmoid')
+    ])
+    
+    # GRU model
+    model = tf.keras.Sequential([
+        tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
+        tf.keras.layers.GRU(units=120, dropout=0.2, recurrent_dropout=0.2, 
+                            recurrent_activation='relu', activation='relu'),
+        tf.keras.layers.Dropout(rate=0.4),
+        tf.keras.layers.Dense(120, activation='relu'),
+        tf.keras.layers.Dropout(rate=0.2),
+        tf.keras.layers.Dense(1, activation='sigmoid')
+    ])
+    """
 
     # compile the model
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', precision_m, recall_m, f1_m])
     model.summary()
 
     # train the model
-    num_epoch = 60
+    num_epoch = 20
     history = model.fit(X_train, Y_train, epochs=num_epoch, validation_data=(X_test, Y_test))
+
+    # visualize the training history
+    visualize_dl_training(history)
 
     # get the dictionary of words and frequencies in the corpus
     word_index = trained_tokenizer.word_index
@@ -334,7 +384,7 @@ def deep_learning_with_embedding(df):
 
 def make_prediction(model_pack, file_path: str, model_name: str):
     """
-    Make prediction for a single news file
+    Make prediction for a single file of news
     :param model_pack: contained model weights and feature extracting transformers
     :param file_path: full file system path to the .txt file containing the news
     :param model_name: name of the model to use
@@ -360,7 +410,7 @@ def make_prediction(model_pack, file_path: str, model_name: str):
         trained_tokenizer = model_pack['tokenizer']
         vocab_size = model_pack['vocab_size']
         max_length = model_pack['max_length']
-        sample, _ = word_tokenize(content, vocab_size, max_length, trained_tokenizer)
+        sample, _ = tokenize_words(content, vocab_size, max_length, trained_tokenizer)
     else:
         # other classical models
         models = model_pack['models']
@@ -370,9 +420,9 @@ def make_prediction(model_pack, file_path: str, model_name: str):
         tfidf_content = model_pack['tfidf_content']
 
         # extract features
-        mat_title, _ = tfdif_transform(raw_data=title, tfidf_vectorizer=tfidf_title)
-        mat_content, _ = tfdif_transform(raw_data=content, tfidf_vectorizer=tfidf_content)
-        mat_ngram, _ = ngram_vectorize(raw_data=content, cv_ngram=cv_ngram)
+        mat_title, _ = tfidf_transform(raw_data=title, tfidf_vectorizer=tfidf_title)
+        mat_content, _ = tfidf_transform(raw_data=content, tfidf_vectorizer=tfidf_content)
+        mat_ngram, _ = vectorize_ngrams(raw_data=content, cv_ngram=cv_ngram)
         sample = np.hstack((mat_title, mat_content, mat_ngram))
 
     # make prediction
@@ -384,58 +434,48 @@ def make_prediction(model_pack, file_path: str, model_name: str):
     else:
         print("This is legit news")
 
+
 def create_pad_sequence(df, total_words, maxlen):
     x_train, x_test, y_train, y_test = train_test_split(df.clean_joined, df.is_fake, test_size=0.2)
-    print(x_train)
-    tokenizer = Tokenizer(num_words=total_words)
+    tokenizer = Tokenizer(new_words=total_words)
     # update internal vocabulary based on a list of tests
     tokenizer.fit_on_texts(x_train)
     # transformation each text into a sequences integer
     train_sequences = tokenizer.texts_to_sequences(x_train)
+    test_sequences = tokenizer.texts_to_sequences(x_train)
+    pad_train = pad_sequences(train_sequences, maxlen=maxlen, padding='post', truncating='post')
+    pad_test = pad_sequences(test_sequences, maxlen=maxlen, padding='post', truncating='post')
 
-    print(train_sequences)
-    test_sequences = tokenizer.texts_to_sequences(x_test)
-    # sentence length maxlength = 100
-    padded_train = pad_sequences(train_sequences, maxlen=maxlen, padding='post', truncating='post')
-    padded_test = pad_sequences(test_sequences, maxlen=maxlen, padding='post', truncating='post')
-    # padded_train = pad_sequences(train_sequences, maxlen=1000, padding='post', truncating='post')
-    # padded_test = pad_sequences(test_sequences, maxlen=1000, padding='post', truncating='post')
-    return padded_train, padded_test, y_train, x_test
 
-def build_lstm_model(padded_train, total_words, y_train):
-    print("start modeling")
-    # intialize sequential model
+def build_ltsm_model(padded_train, total_words, y_train):
+    # create sequential model
     model = Sequential()
 
     # embedding layer
-    # embedding_vector_feature = 40
-    # input_length = sent_length = 100
-    model.add(Embedding(total_words, output_dim= 240))
-    # model.add(Embedding(1000, output_dim=128))
+    model.add(Embedding(total_words, output_dim= 128))
 
     # Bi-directional RNN/LSTM
-    model.add(Bidirectional(LSTM(128)))
+    model.add(Bidirectional (LSTM(128)))
 
     #Dense layers
     model.add(Dense(128, activation='relu'))
     model.add(Dense(1,activation='sigmoid'))
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
     model.summary()
-
     y_train = np.asarray(y_train)
+
     # train the model
-    model.fit(padded_train, y_train, batch_size=64, validation_split=0.1,epochs=2)
-    print("finish modeling")
+    print(model.fit(padded_train, y_train, batch_size=64, validation_split=0.1,epochs=2))
 
     return model
 
-def predict_lstm_model(model, padded_test, y_test):
-    print("start prediction")
+
+def predict_stml_model(model, padded_test, y_test):
     pred = model.predict(padded_test)
     prediction = []
     # if the predicted value is > 0.5 it is real else it is fake
     for i in range(len(pred)):
-        if pred[i] > 0.5:
+        if pred[i].items > 0.5:
             prediction.append(1)
         else:
             prediction.append(0)

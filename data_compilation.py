@@ -74,7 +74,6 @@ def build_real_news_dataframe(include_celeb: bool = False):
     :return: the real news data frame
     """
     # real news dataset
-    # I removed is_fake because the data type becomes objoct
     #column_names = ['Title', 'Content']
     realDf = pd.DataFrame()
 
@@ -95,7 +94,6 @@ def build_fake_news_dataframe(include_celeb: bool = False):
     :return: the fake news data frame
     """
     # fake new dataset
-    #column_names = ['Title', 'Content']
     fakeDf = pd.DataFrame()
 
     # build the data frame with the non-celeb news
