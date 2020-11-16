@@ -4,8 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import (
     train_test_split,
-    StratifiedKFold,
-    GridSearchCV
+    StratifiedKFold
 )
 
 from sklearn.metrics import (
@@ -37,11 +36,12 @@ from feature_engineering import (
     tokenize_words
 )
 
-from keras_evaluation_metrics import(
+from keras_evaluation_metrics import (
     precision_m,
     recall_m,
     f1_m
 )
+
 
 def evaluate(fit, X_test, Y_test):
     """
@@ -104,70 +104,10 @@ def cross_validate(model, features, labels):
     # average and pack the results into a data frame
     values = {
         "Metric": ["Accuracy", "Precision", "Recall", "F1-Score", "AUC"],
-        "Value": [accuracy / k, precision / k, recall / k, f_score / k , auc / k]
+        "Value": [accuracy / k, precision / k, recall / k, f_score / k, auc / k]
     }
     metrics_df = pd.DataFrame.from_dict(values)
     return metrics_df
-
-
-def none_dl_grid_search(df):
-    """
-    Using grid search to find the best model and hyperparameters
-    :param df: raw data frame
-    :return:
-    """
-    # extract data
-    X = df[['Title', 'Content']].values
-    Y = df['is_fake'].values
-    labels = Y.astype('int')
-
-    # extract the features from the data frame
-    feature_pack = extract_features(X)
-    features = feature_pack['features']
-
-    # create models and parameters
-    model_params = {
-        'Logistic Regression': {
-            'model': LogisticRegression(n_jobs=8),
-            'params': {
-                'C': [1, 5, 10]
-            }
-        },
-        'Random Forest': {
-            'model': RandomForestClassifier(),
-            'params': {
-                'n_estimators': [1, 5, 10]
-            }
-        },
-        'XGBoost': {
-            'model': XGBClassifier(n_jobs=8),
-            'params': {
-                'n_estimators': [1, 5, 10]
-            }
-        }
-    }
-
-    # list of scores
-    scores = []
-
-    # iterate over the models
-    for model_name, mp in model_params.items():
-        print("Working on", model_name)
-        clf = GridSearchCV(mp['model'], mp['params'], cv=5, return_train_score=False)
-        clf.fit(features, labels)
-        scores.append({
-            'model': model_name,
-            'best_params': clf.best_params_,
-            'best_score': clf.best_score_
-        })
-
-    # display the results
-    resultsDF = pd.DataFrame(scores)
-    resultsDF.columns = ['Model', 'Best Params', 'Best Score']
-    print(scores)
-    print(resultsDF)
-    # save the results
-    resultsDF.to_csv('output/none_dl_grid_search_results.csv')
 
 
 def classical_models(df):
@@ -186,15 +126,17 @@ def classical_models(df):
     features = feature_pack['features']
 
     # split the dataset 80 / 20 for train and test
-    X_train, X_test, Y_train, Y_test = train_test_split(features, labels, test_size=0.2, random_state=0, stratify=labels)
+    X_train, X_test, Y_train, Y_test = train_test_split(features, labels, test_size=0.2, random_state=0,
+                                                        stratify=labels)
 
     # model
     models = {
-        #"Logistic Regression": LogisticRegression(),
-        #"Decision Tree": DecisionTreeClassifier(),
-        #"Gaussian NB": GaussianNB(),
-        #"XGBoost": XGBClassifier(n_jobs=8)
-        "SVM": SVC(gamma='auto', kernel='poly', probability=True)
+        # "Logistic Regression": LogisticRegression(),
+        # "Decision Tree": DecisionTreeClassifier(),
+        # "Gaussian NB": GaussianNB(),
+        # "Random Forest": RandomForestClassifier(),
+        # "XGBoost": XGBClassifier(n_jobs=8),
+        "SVM": SVC(gamma='auto', kernel='poly', probability=True),
     }
 
     # create a data frame to store validation metrics and test metrics
@@ -278,9 +220,9 @@ def deep_learning_model(df):
     :param df: input data frame containing raw data
     :return: trained neural network
     """
-    vocab_size = 3000   #19885 # max number of words possible in Tokenizer
+    vocab_size = 16876  # 3000
     embedding_dim = 100
-    max_length = 200
+    max_length = 1000  # 200
 
     # extract data
     X = df[['Title', 'Content']].values
@@ -301,6 +243,17 @@ def deep_learning_model(df):
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
     """
+    model = tf.keras.Sequential([
+        tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
+        tf.keras.layers.GlobalAveragePooling1D(),
+        tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dense(1, activation='sigmoid')
+    ])
+
+
     # LSTM model
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
@@ -313,7 +266,7 @@ def deep_learning_model(df):
         tf.keras.layers.Dense(256),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
-    
+
     # LSTM model
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
@@ -328,11 +281,11 @@ def deep_learning_model(df):
         tf.keras.layers.Dense(256),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
-    
+
     # GRU model
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
-        tf.keras.layers.GRU(units=120, dropout=0.2, recurrent_dropout=0.2, 
+        tf.keras.layers.GRU(units=100, dropout=0.2, recurrent_dropout=0.2,
                             recurrent_activation='relu', activation='relu'),
         tf.keras.layers.Dropout(rate=0.4),
         tf.keras.layers.Dense(120, activation='relu'),
@@ -453,20 +406,20 @@ def build_ltsm_model(padded_train, total_words, y_train):
     model = Sequential()
 
     # embedding layer
-    model.add(Embedding(total_words, output_dim= 128))
+    model.add(Embedding(total_words, output_dim=128))
 
     # Bi-directional RNN/LSTM
-    model.add(Bidirectional (LSTM(128)))
+    model.add(Bidirectional(LSTM(128)))
 
-    #Dense layers
+    # Dense layers
     model.add(Dense(128, activation='relu'))
-    model.add(Dense(1,activation='sigmoid'))
+    model.add(Dense(1, activation='sigmoid'))
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
     model.summary()
     y_train = np.asarray(y_train)
 
     # train the model
-    print(model.fit(padded_train, y_train, batch_size=64, validation_split=0.1,epochs=2))
+    print(model.fit(padded_train, y_train, batch_size=64, validation_split=0.1, epochs=2))
 
     return model
 

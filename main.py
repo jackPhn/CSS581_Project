@@ -3,7 +3,8 @@ import pandas as pd
 
 from data_compilation import (
     build_real_news_dataframe,
-    build_fake_news_dataframe
+    build_fake_news_dataframe,
+    clean_text
 )
 
 from data_exploration import (
@@ -23,9 +24,7 @@ from model_building import (
 from hyperparameter_tuning import (
     none_dl_grid_search,
     dl_grid_search
-
 )
-
 
 from data_visualization import (
     visualize_real_feak,
@@ -107,47 +106,61 @@ def main():
     # -------------------------------------------------
 
     # LSTM and RNN
-    # df_clean, stop_words = process_feature_enginering(news_df)
+    # df_clean, stop_words = process_feature_engineering(news_df)
     # visualize_fake_word_cloud_plot(df_clean, stop_words)
     # visualize_ligit_word_cloud_plot(df_clean, stop_words)
 
     # -------------------------------------------------------------------------------------------------
-    # classical models
     # shuffle the dataset
-    # This part will take a significant amount of time to run, comment out if not needed
     news_df = news_df.sample(frac=1, random_state=1).reset_index(drop=True)
+    # Clean the data by removing punctuation
+    news_df = clean_text(news_df, "Content", "Content")
+    news_df = clean_text(news_df, "Title", "Title")
 
-    # using grid search to find the best parameters for several models
-    # print()
-    # print("Performing grid search for non-deep-learning models")
-    # none_dl_grid_search(news_df)
+    response = input("Do you want to perform cross validation (v) or hyperparameter tuning (t)?").lower()
 
-    """
-    # cross validation and training
-    print("Performing cross validation and training models")
-    classic_pack = classical_models(news_df)
+    while True:
+        if response == 'v':
+            is_dl = input("Deep learning? (Y or N)").lower()
 
-    # change the file path below to the absolute file path of a sample used to make prediction on
-    sample_file_path = "/Users/jack/programming/machine_learning/CSS581_Project_Repo/CSS581_Project/fakeNewsDatasets/fakeNewsDataset/fake/tech008.fake.txt"
-    # make a prediction
-    print()
-    model_name = "Logistic Regression"
-    print("Making a prediction with", model_name)
-    make_prediction(classic_pack, sample_file_path, model_name)
+            if is_dl == 'n':
+                # cross validation and training for classical models
+                print("Performing cross validation and training models")
+                classic_pack = classical_models(news_df)
 
-    # -------------------------------------------------------------------------------------------------
-    # deep learning model with word embedding
-    print()
-    print("Evaluating and training a deep learning model")
-    dl_pack = deep_learning_model(news_df)
-    # make a prediction
-    # change the file path below to the absolute file path of a sample
-    print()
-    print("Making a prediction with the deep learning model")
-    make_prediction(dl_pack, sample_file_path, "dl")
-    """
-    # hyperparameter tuning for deep learning model
-    dl_grid_search(news_df)
+            else:
+                # deep learning model with word embedding
+                print("Evaluating and training a deep learning model")
+                dl_pack = deep_learning_model(news_df)
+
+            # change the file path below to the absolute file path of a sample used to make prediction on
+            # sample_file_path = "/Users/jack/programming/machine_learning/CSS581_Project_Repo/CSS581_Project/fakeNewsDatasets/fakeNewsDataset/fake/tech008.fake.txt"
+
+            # make a prediction
+            # model_name = "Logistic Regression"
+            # print("Making a prediction with", model_name)
+            # make_prediction(classic_pack, sample_file_path, model_name)
+
+            # make a prediction
+            #print("Making a prediction with the deep learning model")
+            #make_prediction(dl_pack, sample_file_path, "dl")
+
+        elif response == 't':
+            is_dl = input("Deep learning? (Y or N)").lower()
+
+            if is_dl == 'n':
+                #using grid search to find the best parameters for several models
+                print("Performing grid search for non-deep-learning models")
+                none_dl_grid_search(news_df)
+
+            else:
+                # hyperparameter tuning for deep learning model
+                print("Performing grid search for deep learning model")
+                dl_grid_search(news_df)
+
+        is_end = input("Do you want to continue? (Y or N)").lower()
+        if is_end == 'n':
+            break
 
 
 # Press the green button in the gutter to run the script.

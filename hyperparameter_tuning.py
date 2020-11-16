@@ -103,7 +103,7 @@ def train_test_model(df, hparams):
     :param hparams:
     :return:
     """
-    vocab_size = 19885 # max number of words possible in Tokenizer
+    vocab_size = 16876
     embedding_dim = 200
     max_length = 200
 
@@ -118,7 +118,7 @@ def train_test_model(df, hparams):
     # split the dataset
     X_train, X_test, Y_train, Y_test = train_test_split(features, labels, test_size=0.2, random_state=0, stratify=Y)
 
-    # neural network
+    # the model to tune for
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
         tf.keras.layers.GlobalAveragePooling1D(),
@@ -126,6 +126,46 @@ def train_test_model(df, hparams):
         tf.keras.layers.Dropout(hparams[HP_DROPOUT]),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
+    """
+        # LSTM model
+        model = tf.keras.Sequential([
+            tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
+            tf.keras.layers.Conv1D(64, 5, activation='relu'),
+            tf.keras.layers.MaxPool1D(),
+            tf.keras.layers.LSTM(20, return_sequences=True),
+            tf.keras.layers.Dropout(0.2),
+            tf.keras.layers.Dense(512),
+            tf.keras.layers.Dropout(0.3),
+            tf.keras.layers.Dense(256),
+            tf.keras.layers.Dense(1, activation='sigmoid')
+        ])
+
+        # LSTM model
+        model = tf.keras.Sequential([
+            tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
+            tf.keras.layers.Dropout(0.2),
+            tf.keras.layers.Conv1D(64, 5, activation='relu'),
+            tf.keras.layers.MaxPool1D(),
+            tf.keras.layers.LSTM(20, return_sequences=True),
+            tf.keras.layers.LSTM(20),
+            tf.keras.layers.Dropout(0.2),
+            tf.keras.layers.Dense(512),
+            tf.keras.layers.Dropout(0.3),
+            tf.keras.layers.Dense(256),
+            tf.keras.layers.Dense(1, activation='sigmoid')
+        ])
+
+        # GRU model
+        model = tf.keras.Sequential([
+            tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
+            tf.keras.layers.GRU(units=120, dropout=0.2, recurrent_dropout=0.2, 
+                                recurrent_activation='relu', activation='relu'),
+            tf.keras.layers.Dropout(rate=0.4),
+            tf.keras.layers.Dense(120, activation='relu'),
+            tf.keras.layers.Dropout(rate=0.2),
+            tf.keras.layers.Dense(1, activation='sigmoid')
+        ])
+        """
 
     model.compile(optimizer=hparams[HP_OPTIMIZER], loss='binary_crossentropy', metrics=['accuracy'])
 

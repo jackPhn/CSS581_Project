@@ -1,6 +1,22 @@
 import pandas as pd
 import os
+import re
 from tabulate import tabulate
+
+
+def clean_text(df, text_field, new_text_field):
+    """
+    Remove all punctuations and marks
+    :param df: data frame to be cleaned
+    :param text_field: name of column to be cleaned
+    :param new_text_field: result column
+    :return: the original data frame with the result column
+    """
+    df[new_text_field] = df[text_field].str.lower()
+    df[new_text_field] = df[new_text_field].apply(
+        lambda elem: re.sub(r"(@[A-Za-z0-9]+)|([^0-9A-Za-z \t])|(\w+:\/\/\S+)|^rt|http.+?", " ", elem)
+    )
+    return df
 
 
 def get_dataset_from_file(dataset: str, is_fake: bool, is_news:bool):
@@ -104,8 +120,3 @@ def build_fake_news_dataframe(include_celeb: bool = False):
         fakeDf = fakeDf.append(get_dataset_from_file("celebrityDataset", True, False), ignore_index=True)
 
     return fakeDf
-
-
-def concatenet_dataframes(real_news_df, fake_news_df):
-    news_df = pd.concat([real_news_df, fake_news_df])
-    return news_df
