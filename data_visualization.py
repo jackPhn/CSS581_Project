@@ -16,7 +16,7 @@ from sklearn.metrics import (
     f1_score,
     )
 
-def visualize_real_feak(news_df):
+def visualize_real_fake(news_df):
     # displaying ligit and fake count
     news_md_df = news_df.copy()
     news_md_df['is_fake'] = pd.Series(np.where(news_md_df.is_fake.values == 1, True, False),
@@ -41,8 +41,8 @@ def visualize_news_celebrity(news_df):
 #     sns.countplot(y="subject", data= df)
 #     plt.show()
 
-# visualis fake and ligit
-def visulaize_fake_ligit(df):
+# visualis fake and legit
+def visulaize_fake_legit(df):
     plt.figure(figsize = (8,8))
     sns.countplot(y="is_fake", data= df)
     plt.show()

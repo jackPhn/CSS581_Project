@@ -27,10 +27,10 @@ from hyperparameter_tuning import (
 )
 
 from data_visualization import (
-    visualize_real_feak,
+    visualize_real_fake,
     visualize_news_celebrity,
     visualize_fake_word_cloud_plot,
-    visulaize_fake_ligit,
+    visulaize_fake_legit,
     visualize_ligit_word_cloud_plot,
     visualize_word_distribution,
     visualize_confusion_matrix,
@@ -100,9 +100,9 @@ def main():
 
     # -------------------------------------------------------------------------------------------------
     # Visualization
-    # visualize_real_feak(news_df)
+    # visualize_real_fake(news_df)
     # visualize_news_celebrity(news_df)
-    # visulaize_fake_ligit(news_df)
+    # visulaize_fake_legit(news_df)
     # -------------------------------------------------
 
     # LSTM and RNN
