@@ -24,6 +24,7 @@ from sklearn.svm import SVC
 from xgboost import XGBClassifier
 
 import tensorflow as tf
+from keras.utils import plot_model
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from keras.models import Sequential
@@ -131,11 +132,11 @@ def classical_models(df):
 
     # model
     models = {
-        # "Logistic Regression": LogisticRegression(),
-        # "Decision Tree": DecisionTreeClassifier(),
-        # "Gaussian NB": GaussianNB(),
-        # "Random Forest": RandomForestClassifier(),
-        # "XGBoost": XGBClassifier(n_jobs=8),
+        "Logistic Regression": LogisticRegression(),
+        "Decision Tree": DecisionTreeClassifier(),
+        "Gaussian NB": GaussianNB(),
+        "Random Forest": RandomForestClassifier(),
+        "XGBoost": XGBClassifier(n_jobs=8),
         "SVM": SVC(gamma='auto', kernel='poly', probability=True),
     }
 
@@ -305,6 +306,9 @@ def deep_learning_model(df):
     # visualize the training history
     visualize_dl_training(history)
 
+    # plot the model
+    plot_model(model, to_file="output/model.png")
+
     # get the dictionary of words and frequencies in the corpus
     word_index = trained_tokenizer.word_index
     # reverse the key-value relationship in word_index
@@ -434,7 +438,7 @@ def predict_stml_model(model, padded_test, y_test):
         else:
             prediction.append(0)
 
-    # getting the meassurement
+    # getting the measurement
     accuracy = accuracy_score(list(y_test), prediction)
     precision = precision_score(list(y_test), prediction)
     recall = recall_score(list(y_test), prediction)

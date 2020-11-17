@@ -31,7 +31,7 @@ from data_visualization import (
     visualize_news_celebrity,
     visualize_fake_word_cloud_plot,
     visulaize_fake_legit,
-    visualize_ligit_word_cloud_plot,
+    visualize_legit_word_cloud_plot,
     visualize_word_distribution,
     visualize_confusion_matrix,
 )
@@ -46,6 +46,9 @@ def main():
     real_news_df = build_real_news_dataframe(include_celeb=True)
     fake_news_df = build_fake_news_dataframe(include_celeb=True)
     news_df = pd.concat([real_news_df, fake_news_df])
+    # Clean the data by removing punctuation
+    news_df = clean_text(news_df, "Content", "Content")
+    news_df = clean_text(news_df, "Title", "Title")
 
     # find the longest news content
     news_length = [len(news) for news in news_df['Content'].tolist()]
@@ -108,14 +111,11 @@ def main():
     # LSTM and RNN
     # df_clean, stop_words = process_feature_engineering(news_df)
     # visualize_fake_word_cloud_plot(df_clean, stop_words)
-    # visualize_ligit_word_cloud_plot(df_clean, stop_words)
+    # visualize_legit_word_cloud_plot(df_clean, stop_words)
 
     # -------------------------------------------------------------------------------------------------
     # shuffle the dataset
     news_df = news_df.sample(frac=1, random_state=1).reset_index(drop=True)
-    # Clean the data by removing punctuation
-    news_df = clean_text(news_df, "Content", "Content")
-    news_df = clean_text(news_df, "Title", "Title")
 
     response = input("Do you want to perform cross validation (v) or hyperparameter tuning (t)?").lower()
 

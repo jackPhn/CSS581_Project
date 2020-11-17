@@ -53,7 +53,7 @@ def visualize_fake_word_cloud_plot(df, stop_words):
     plt.imshow(wc, interpolation='bilinear')
     plt.show()
 
-def visualize_ligit_word_cloud_plot(df, stop_words):
+def visualize_legit_word_cloud_plot(df, stop_words):
     plt.figure(figsize=(12,12))
     wc = WordCloud(max_words = 2000, width = 8000, height = 8000, stopwords = stop_words).generate(" ".join(df[df.is_fake==0].clean_joined))
     plt.imshow(wc, interpolation='bilinear')
