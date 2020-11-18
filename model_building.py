@@ -133,8 +133,8 @@ def classical_models(df):
     # model
     models = {
         "Logistic Regression": LogisticRegression(),
-        "Decision Tree": DecisionTreeClassifier(),
         "Gaussian NB": GaussianNB(),
+        "Decision Tree": DecisionTreeClassifier(),
         "Random Forest": RandomForestClassifier(),
         "XGBoost": XGBClassifier(n_jobs=8),
         "SVM": SVC(gamma='auto', kernel='poly', probability=True),
@@ -221,9 +221,9 @@ def deep_learning_model(df):
     :param df: input data frame containing raw data
     :return: trained neural network
     """
-    vocab_size = 16876  # 3000
-    embedding_dim = 100
-    max_length = 1000  # 200
+    vocab_size = 3000   #16876
+    embedding_dim = 32
+    max_length = 200  # 200
 
     # extract data
     X = df[['Title', 'Content']].values
@@ -235,7 +235,7 @@ def deep_learning_model(df):
 
     # split the dataset
     X_train, X_test, Y_train, Y_test = train_test_split(features, labels, test_size=0.2, random_state=0, stratify=Y)
-
+    """
     # neural network
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
@@ -243,7 +243,7 @@ def deep_learning_model(df):
         tf.keras.layers.Dense(10, activation='relu'),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
-    """
+    
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
         tf.keras.layers.GlobalAveragePooling1D(),
@@ -253,7 +253,6 @@ def deep_learning_model(df):
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
-
 
     # LSTM model
     model = tf.keras.Sequential([
@@ -267,7 +266,7 @@ def deep_learning_model(df):
         tf.keras.layers.Dense(256),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
-
+    """
     # LSTM model
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
@@ -282,19 +281,17 @@ def deep_learning_model(df):
         tf.keras.layers.Dense(256),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
-
+    """
     # GRU model
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
-        tf.keras.layers.GRU(units=100, dropout=0.2, recurrent_dropout=0.2,
+        tf.keras.layers.GRU(units=30, dropout=0.2, recurrent_dropout=0.2,
                             recurrent_activation='relu', activation='relu'),
-        tf.keras.layers.Dropout(rate=0.4),
         tf.keras.layers.Dense(120, activation='relu'),
         tf.keras.layers.Dropout(rate=0.2),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
     """
-
     # compile the model
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', precision_m, recall_m, f1_m])
     model.summary()
