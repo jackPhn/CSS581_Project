@@ -84,14 +84,17 @@ def none_dl_grid_search(df):
 
 
 # setup hyperparameter experiment
-HP_NUM_UNITS = hp.HParam('num units', hp.Discrete([4, 8, 10, 16, 20, 32]))
+HP_EMBEDDING_DIM = hp.HParam('embedding dim', hp.Discrete([8, 16, 32, 64]))
+HP_MAX_LENGTH = hp.HParam('max length', hp.Discrete([100, 200, 300, 1000, 2000, 3000]))
+HP_NUM_UNITS_1 = hp.HParam('num units 1', hp.Discrete([16, 20, 32, 64, 128, 256]))
 HP_DROPOUT = hp.HParam('dropout', hp.RealInterval(0.1, 0.5))
 HP_OPTIMIZER = hp.HParam('optimizer', hp.Discrete(['adam', 'sgd', 'RMSprop']))
+HP_NUM_UNITS_2 = hp.HParam('num units 2', hp.Discrete([4, 8, 10, 16, 20, 32]))
 METRIC_ACCURACY = 'accuracy'
 
 with tf.summary.create_file_writer('output/hparam_tuning').as_default():
     hp.hparams_config(
-        hparams=[HP_NUM_UNITS, HP_DROPOUT, HP_OPTIMIZER],
+        hparams=[HP_EMBEDDING_DIM, HP_NUM_UNITS_1, HP_DROPOUT, HP_NUM_UNITS_2, HP_OPTIMIZER],
         metrics=[hp.Metric(METRIC_ACCURACY, display_name='Accuracy')]
     )
 
@@ -103,33 +106,33 @@ def train_test_model(df, hparams):
     :param hparams:
     :return:
     """
-    vocab_size = 16876
-    embedding_dim = 200
-    max_length = 200
-
     # extract data
     X = df[['Title', 'Content']].values
     Y = df['is_fake'].values
     labels = Y.astype('int')
 
     # tokenize the words
-    features, trained_tokenizer = tokenize_words(raw_data=X[:, 1], vocab_size=vocab_size, max_length=max_length)
+    features, trained_tokenizer = tokenize_words(raw_data=X[:, 1], max_length=hparams[HP_MAX_LENGTH])
+
+    # get the size of the vocabulary from the tokenizer
+    vocab_size = len(trained_tokenizer.word_index)
 
     # split the dataset
-    X_train, X_test, Y_train, Y_test = train_test_split(features, labels, test_size=0.2, random_state=0, stratify=Y)
+    X_train, X_test, Y_train, Y_test = train_test_split(features, labels, test_size=0.2, random_state=42, stratify=labels)
 
     # the model to tune for
     model = tf.keras.Sequential([
-        tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
+        tf.keras.layers.Embedding(vocab_size + 1, hparams[HP_EMBEDDING_DIM], input_length=hparams[HP_MAX_LENGTH]),
         tf.keras.layers.GlobalAveragePooling1D(),
-        tf.keras.layers.Dense(hparams[HP_NUM_UNITS], activation='relu'),
+        tf.keras.layers.Dense(hparams[HP_NUM_UNITS_1], activation='relu'),
         tf.keras.layers.Dropout(hparams[HP_DROPOUT]),
+        tf.keras.layers.Dense(hparams[HP_NUM_UNITS_2], activation='relu'),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
     """
         # LSTM model
         model = tf.keras.Sequential([
-            tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
+            tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
             tf.keras.layers.Conv1D(64, 5, activation='relu'),
             tf.keras.layers.MaxPool1D(),
             tf.keras.layers.LSTM(20, return_sequences=True),
@@ -142,7 +145,7 @@ def train_test_model(df, hparams):
 
         # LSTM model
         model = tf.keras.Sequential([
-            tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
+            tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
             tf.keras.layers.Dropout(0.2),
             tf.keras.layers.Conv1D(64, 5, activation='relu'),
             tf.keras.layers.MaxPool1D(),
@@ -157,7 +160,7 @@ def train_test_model(df, hparams):
 
         # GRU model
         model = tf.keras.Sequential([
-            tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
+            tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
             tf.keras.layers.GRU(units=120, dropout=0.2, recurrent_dropout=0.2, 
                                 recurrent_activation='relu', activation='relu'),
             tf.keras.layers.Dropout(rate=0.4),
@@ -169,7 +172,7 @@ def train_test_model(df, hparams):
 
     model.compile(optimizer=hparams[HP_OPTIMIZER], loss='binary_crossentropy', metrics=['accuracy'])
 
-    model.fit(X_train, Y_train, epochs=10)
+    model.fit(X_train, Y_train, epochs=20)
     _, accuracy = model.evaluate(X_test, Y_test)
     return accuracy
 
@@ -196,16 +199,22 @@ def dl_grid_search(df):
     """
     session_num = 0
 
-    for num_units in HP_NUM_UNITS.domain.values:
-        for dropout_rate in (HP_DROPOUT.domain.min_value, HP_DROPOUT.domain.max_value):
-            for optimizer in HP_OPTIMIZER.domain.values:
-                hparams = {
-                    HP_NUM_UNITS: num_units,
-                    HP_DROPOUT: dropout_rate,
-                    HP_OPTIMIZER: optimizer,
-                }
-                run_name = "run-%d" % session_num
-                print('--- Starting trial: %s' % run_name)
-                print({h.name: hparams[h] for h in hparams})
-                run('output/hparam_tuning/' + run_name, hparams, df)
-                session_num += 1
+    for embedding_dim in HP_EMBEDDING_DIM.domain.values:
+        for max_length in HP_MAX_LENGTH.domain.values:
+            for num_units_1 in HP_NUM_UNITS_1.domain.values:
+                for dropout_rate in (HP_DROPOUT.domain.min_value, HP_DROPOUT.domain.max_value):
+                    for num_units_2 in HP_NUM_UNITS_2.domain.values:
+                        for optimizer in HP_OPTIMIZER.domain.values:
+                            hparams = {
+                                HP_EMBEDDING_DIM: embedding_dim,
+                                HP_MAX_LENGTH: max_length,
+                                HP_NUM_UNITS_1: num_units_1,
+                                HP_DROPOUT: dropout_rate,
+                                HP_NUM_UNITS_2: num_units_2,
+                                HP_OPTIMIZER: optimizer,
+                            }
+                            run_name = "run-%d" % session_num
+                            print('--- Starting trial: %s' % run_name)
+                            print({h.name: hparams[h] for h in hparams})
+                            run('output/hparam_tuning/' + run_name, hparams, df)
+                            session_num += 1

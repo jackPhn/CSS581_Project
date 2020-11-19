@@ -51,8 +51,8 @@ def main():
     news_df = clean_text(news_df, "Title", "Title")
 
     # find the longest news content
-    news_length = [len(news) for news in news_df['Content'].tolist()]
-    print("The number of words in the longest piece of news is:", np.max(news_length))
+    max_content_length = np.max([len(news) for news in news_df['Content'].tolist()])
+    print("The number of words in the longest piece of news is:", max_content_length)
     print()
 
     # find out the total number of unique words in the corpus

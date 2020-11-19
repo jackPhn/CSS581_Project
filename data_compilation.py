@@ -1,7 +1,8 @@
 import pandas as pd
 import os
 import re
-from tabulate import tabulate
+import nltk
+from nltk.corpus import stopwords
 
 
 def clean_text(df, text_field, new_text_field):

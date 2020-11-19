@@ -12,8 +12,7 @@ from sklearn.metrics import (
     precision_score,
     f1_score,
     recall_score,
-    roc_auc_score,
-    roc_curve
+    roc_auc_score
 )
 
 from sklearn.tree import DecisionTreeClassifier
@@ -127,8 +126,7 @@ def classical_models(df):
     features = feature_pack['features']
 
     # split the dataset 80 / 20 for train and test
-    X_train, X_test, Y_train, Y_test = train_test_split(features, labels, test_size=0.2, random_state=0,
-                                                        stratify=labels)
+    X_train, X_test, Y_train, Y_test = train_test_split(features, labels, test_size=0.2, random_state=0, stratify=labels)
 
     # model
     models = {
@@ -221,9 +219,8 @@ def deep_learning_model(df):
     :param df: input data frame containing raw data
     :return: trained neural network
     """
-    vocab_size = 3000   #16876
     embedding_dim = 32
-    max_length = 200  # 200
+    max_length = 200 #np.max([len(news) for news in df['Content'].tolist()])
 
     # extract data
     X = df[['Title', 'Content']].values
@@ -231,21 +228,33 @@ def deep_learning_model(df):
     labels = Y.astype('int')
 
     # tokenize the words
-    features, trained_tokenizer = tokenize_words(raw_data=X[:, 1], vocab_size=vocab_size, max_length=max_length)
+    features, trained_tokenizer = tokenize_words(raw_data=X[:, 1], max_length=max_length)
+
+    # get the size of the vocabulary from the tokenizer
+    vocab_size = len(trained_tokenizer.word_index)
 
     # split the dataset
-    X_train, X_test, Y_train, Y_test = train_test_split(features, labels, test_size=0.2, random_state=0, stratify=Y)
+    X_train, X_test, Y_train, Y_test = train_test_split(features, labels, test_size=0.2, random_state=42, stratify=labels)
+
+    model = tf.keras.Sequential([
+        tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
+        tf.keras.layers.GlobalAveragePooling1D(),
+        tf.keras.layers.Dense(256, activation='relu'),
+        tf.keras.layers.Dropout(0.5),
+        tf.keras.layers.Dense(4, activation='relu'),
+        tf.keras.layers.Dense(1, activation='sigmoid')
+    ])
     """
     # neural network
     model = tf.keras.Sequential([
-        tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
+        tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
         tf.keras.layers.GlobalAveragePooling1D(),
         tf.keras.layers.Dense(10, activation='relu'),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
     
     model = tf.keras.Sequential([
-        tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
+        tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
         tf.keras.layers.GlobalAveragePooling1D(),
         tf.keras.layers.Dense(32, activation='relu'),
         tf.keras.layers.Dropout(0.2),
@@ -253,10 +262,10 @@ def deep_learning_model(df):
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
-
+    
     # LSTM model
     model = tf.keras.Sequential([
-        tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
+        tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
         tf.keras.layers.Conv1D(64, 5, activation='relu'),
         tf.keras.layers.MaxPool1D(),
         tf.keras.layers.LSTM(20, return_sequences=True),
@@ -266,25 +275,25 @@ def deep_learning_model(df):
         tf.keras.layers.Dense(256),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
-    """
+    
     # LSTM model
     model = tf.keras.Sequential([
-        tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
+        tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Conv1D(64, 5, activation='relu'),
-        tf.keras.layers.MaxPool1D(),
+        tf.keras.layers.MaxPool1D(pool_size=4),
         tf.keras.layers.LSTM(20, return_sequences=True),
-        tf.keras.layers.LSTM(20),
+        tf.keras.layers.LSTM(10),
         tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.Dense(512),
-        tf.keras.layers.Dropout(0.3),
         tf.keras.layers.Dense(256),
+        tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dense(64),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
-    """
+    
     # GRU model
     model = tf.keras.Sequential([
-        tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=max_length),
+        tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
         tf.keras.layers.GRU(units=30, dropout=0.2, recurrent_dropout=0.2,
                             recurrent_activation='relu', activation='relu'),
         tf.keras.layers.Dense(120, activation='relu'),
@@ -304,7 +313,7 @@ def deep_learning_model(df):
     visualize_dl_training(history)
 
     # plot the model
-    plot_model(model, to_file="output/model.png")
+    plot_model(model, to_file="output/model_architecture.png")
 
     # get the dictionary of words and frequencies in the corpus
     word_index = trained_tokenizer.word_index

@@ -156,7 +156,7 @@ def extract_features(X):
     }
 
 
-def tokenize_words(raw_data, vocab_size, max_length, tokenizer=None):
+def tokenize_words(raw_data, max_length: int, tokenizer=None):
     """
     Tokenize words
     :param raw_data:    input list of texts
@@ -170,9 +170,10 @@ def tokenize_words(raw_data, vocab_size, max_length, tokenizer=None):
     oov_tok = "<OOV>"
 
     if tokenizer is None:
-        tokenizer = Tokenizer(num_words=vocab_size, oov_token=oov_tok)
+        tokenizer = Tokenizer(oov_token=oov_tok)
         tokenizer.fit_on_texts(raw_data)
 
+    # pad the sequence
     sequences = tokenizer.texts_to_sequences(raw_data)
     padded = pad_sequences(sequences, maxlen=max_length, padding=padding_type, truncating=trunc_type)
 
