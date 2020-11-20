@@ -401,17 +401,19 @@ def make_prediction(model_pack, file_path: str, model_name: str):
 
 def create_pad_sequence(df, total_words, maxlen):
     x_train, x_test, y_train, y_test = train_test_split(df.clean_joined, df.is_fake, test_size=0.2)
-    tokenizer = Tokenizer(new_words=total_words)
+    tokenizer = Tokenizer(num_words=total_words)
     # update internal vocabulary based on a list of tests
     tokenizer.fit_on_texts(x_train)
     # transformation each text into a sequences integer
     train_sequences = tokenizer.texts_to_sequences(x_train)
     test_sequences = tokenizer.texts_to_sequences(x_train)
-    pad_train = pad_sequences(train_sequences, maxlen=maxlen, padding='post', truncating='post')
-    pad_test = pad_sequences(test_sequences, maxlen=maxlen, padding='post', truncating='post')
+    padded_train = pad_sequences(train_sequences, maxlen=maxlen, padding='post', truncating='post')
+    padded_test = pad_sequences(test_sequences, maxlen=maxlen, padding='post', truncating='post')
+    # padded_train = pad_sequences(train_sequences, maxlen=1000, padding='post', truncating='post')
+    # padded_test = pad_sequences(test_sequences, maxlen=1000, padding='post', truncating='post')
+    return padded_train, padded_test, y_train, x_test
 
-
-def build_ltsm_model(padded_train, total_words, y_train):
+def build_lstm_model(padded_train, total_words, y_train):
     # create sequential model
     model = Sequential()
 
@@ -419,7 +421,8 @@ def build_ltsm_model(padded_train, total_words, y_train):
     model.add(Embedding(total_words, output_dim=128))
 
     # Bi-directional RNN/LSTM
-    model.add(Bidirectional(LSTM(128)))
+    # model.add(Bidirectional(LSTM(128)))
+    model.add(LSTM(128))
 
     # Dense layers
     model.add(Dense(128, activation='relu'))
@@ -434,7 +437,7 @@ def build_ltsm_model(padded_train, total_words, y_train):
     return model
 
 
-def predict_stml_model(model, padded_test, y_test):
+def predict_lstm_model(model, padded_test, y_test):
     pred = model.predict(padded_test)
     prediction = []
     # if the predicted value is > 0.5 it is real else it is fake
@@ -445,11 +448,11 @@ def predict_stml_model(model, padded_test, y_test):
             prediction.append(0)
 
     # getting the measurement
-    accuracy = accuracy_score(list(y_test), prediction)
-    precision = precision_score(list(y_test), prediction)
-    recall = recall_score(list(y_test), prediction)
-    f1score = f1_score(list(y_test), prediction)
-    auc = roc_auc_score(list(y_test), prediction)
+    accuracy = accuracy_score(y_test, prediction)
+    precision = precision_score(y_test, prediction)
+    recall = recall_score(y_test, prediction)
+    f1score = f1_score(y_test, prediction)
+    auc = roc_auc_score(y_test, prediction)
 
     print("STML Model Accuracy: ", accuracy)
     print("STML Model Precision: ", precision)

@@ -19,7 +19,9 @@ stop_words = []
 def process_feature_engineering(df):
     df_original = combine_two_columns(df, 'Title', 'Content', 'original')
     df_clean, stop_words = remove_stop_words(df_original)
-    return df_clean, stop_words
+    total_words = find_total_words(df_clean)
+    maxlen = find_max_token_length(df_clean)
+    return df_clean, stop_words, total_words, maxlen
 
 
 def combine_two_columns(df, first_column, second_column, new_column):

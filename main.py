@@ -18,8 +18,8 @@ from model_building import (
     make_prediction,
     deep_learning_model,
     create_pad_sequence,
-    predict_stml_model,
-    build_ltsm_model
+    predict_lstm_model,
+    build_lstm_model
 )
 from hyperparameter_tuning import (
     none_dl_grid_search,
@@ -109,9 +109,14 @@ def main():
     # -------------------------------------------------
 
     # LSTM and RNN
-    # df_clean, stop_words = process_feature_engineering(news_df)
+    df_clean, stop_words, total_words, token_maxlen = process_feature_engineering(news_df)
     # visualize_fake_word_cloud_plot(df_clean, stop_words)
-    # visualize_legit_word_cloud_plot(df_clean, stop_words)
+    # visualize_ligit_word_cloud_plot(df_clean, stop_words)
+    padded_train, padded_test, y_train, y_test = create_pad_sequence(df_clean,total_words, token_maxlen)
+    model = build_lstm_model(padded_train,total_words, y_train)
+    prediction = predict_lstm_model(model, padded_test,y_test)
+    visualize_confusion_matrix(prediction, y_test)
+
 
     # -------------------------------------------------------------------------------------------------
     # shuffle the dataset
