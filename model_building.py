@@ -33,7 +33,12 @@ from feature_engineering import (
     tfidf_transform,
     vectorize_ngrams,
     extract_features,
-    tokenize_words
+    tokenize_words,
+    process_feature_engineering,
+)
+
+from data_visualization import(
+    visualize_confusion_matrix
 )
 
 from keras_evaluation_metrics import (
@@ -398,7 +403,6 @@ def make_prediction(model_pack, file_path: str, model_name: str):
     else:
         print("This is legit news")
 
-
 def create_pad_sequence(df, total_words, maxlen):
     x_train, x_test, y_train, y_test = train_test_split(df.clean_joined, df.is_fake, test_size=0.2)
     tokenizer = Tokenizer(num_words=total_words)
@@ -406,19 +410,19 @@ def create_pad_sequence(df, total_words, maxlen):
     tokenizer.fit_on_texts(x_train)
     # transformation each text into a sequences integer
     train_sequences = tokenizer.texts_to_sequences(x_train)
-    test_sequences = tokenizer.texts_to_sequences(x_train)
+    test_sequences = tokenizer.texts_to_sequences(x_test)
     padded_train = pad_sequences(train_sequences, maxlen=maxlen, padding='post', truncating='post')
     padded_test = pad_sequences(test_sequences, maxlen=maxlen, padding='post', truncating='post')
     # padded_train = pad_sequences(train_sequences, maxlen=1000, padding='post', truncating='post')
     # padded_test = pad_sequences(test_sequences, maxlen=1000, padding='post', truncating='post')
-    return padded_train, padded_test, y_train, x_test
+    return padded_train, padded_test, y_train, y_test
 
 def build_lstm_model(padded_train, total_words, y_train):
     # create sequential model
     model = Sequential()
 
     # embedding layer
-    model.add(Embedding(total_words, output_dim=128))
+    model.add(Embedding(total_words, output_dim=240))
 
     # Bi-directional RNN/LSTM
     # model.add(Bidirectional(LSTM(128)))
@@ -432,7 +436,7 @@ def build_lstm_model(padded_train, total_words, y_train):
     y_train = np.asarray(y_train)
 
     # train the model
-    print(model.fit(padded_train, y_train, batch_size=64, validation_split=0.1, epochs=2))
+    print(model.fit(padded_train, y_train, batch_size=64, validation_split=0.1, epochs=5))
 
     return model
 
@@ -454,10 +458,19 @@ def predict_lstm_model(model, padded_test, y_test):
     f1score = f1_score(y_test, prediction)
     auc = roc_auc_score(y_test, prediction)
 
-    print("STML Model Accuracy: ", accuracy)
-    print("STML Model Precision: ", precision)
-    print("STML Model Recall: ", recall)
-    print("STML Model F1_score: ", f1score)
-    print("STML Model AUC: ", auc)
+    print("LSTM Model Accuracy: ", accuracy)
+    print("LSTM Model Precision: ", precision)
+    print("LSTM Model Recall: ", recall)
+    print("LSTM Model F1_score: ", f1score)
+    print("LSTM Model AUC: ", auc)
 
     return prediction
+
+def create_lstm_predictive_model(df):
+    df_clean, stop_words, total_words, token_maxlen = process_feature_engineering(df)
+    # visualize_fake_word_cloud_plot(df_clean, stop_words)
+    # visualize_ligit_word_cloud_plot(df_clean, stop_words)
+    padded_train, padded_test, y_train, y_test = create_pad_sequence(df_clean, total_words, token_maxlen)
+    model = build_lstm_model(padded_train, total_words, y_train)
+    prediction = predict_lstm_model(model, padded_test, y_test)
+    visualize_confusion_matrix(prediction, y_test)
