@@ -27,7 +27,7 @@ from keras.utils import plot_model
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from keras.models import Sequential
-from tensorflow.keras.layers import Embedding, Bidirectional, Dense, LSTM, Dropout
+from tensorflow.keras.layers import Embedding, Bidirectional, Dense, LSTM, Dropout, GRU
 from keras.optimizers import Adam
 
 from feature_engineering import (
@@ -51,23 +51,41 @@ from keras_evaluation_metrics import (
 from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
 
 
-def evaluate(fit, X_test, Y_test):
+def evaluate(fit, X_test, Y_test, is_dl: bool = False):
     """
     Evaluate a trained model for accuracy, precision, recall, f_score, and auc
     :param fit: trained model
     :param X_test: test features
     :param Y_test: test labels
+    :param is_dl: whether the input model is deep learning
     :return: a dictionary of metrics
     """
-    pred = np.array(fit.predict(X_test))
-    pred_proba = np.array(fit.predict_proba(X_test))
+    predictions = np.array(fit.predict(X_test))
+    #predictions_proba = np.array([])
+
+    # deal with deep learning model
+    pred = []
+    if is_dl:
+        for i in range(len(predictions)):
+            # cutoff threshold is 0.5
+            if predictions[i] > 0.5:
+                pred.append(1)
+            else:
+                pred.append(0)
+        predictions_proba = predictions
+        predictions = np.array(pred)
+    else:
+        # deal with classical model
+        predictions_proba = np.array(fit.predict_proba(X_test))
+        # select the predictions for positive label
+        predictions_proba = predictions_proba[:, 1]
 
     return {
-        "accuracy": accuracy_score(Y_test, pred),
-        "precision": precision_score(Y_test, pred),
-        "recall": recall_score(Y_test, pred),
-        "f_score": f1_score(Y_test, pred),
-        "auc": roc_auc_score(np.array(Y_test), pred_proba[:, 1])
+        "accuracy": accuracy_score(Y_test, predictions),
+        "precision": precision_score(Y_test, predictions),
+        "recall": recall_score(Y_test, predictions),
+        "f_score": f1_score(Y_test, predictions),
+        "auc": roc_auc_score(np.array(Y_test), predictions_proba)
     }
 
 
@@ -203,6 +221,7 @@ def visualize_dl_training(history):
     :param history: history object of the training
     :return: none
     """
+    plt.figure()
     # visualize the training history
     plt.plot(history.history['accuracy'])
     plt.plot(history.history['val_accuracy'])
@@ -212,6 +231,7 @@ def visualize_dl_training(history):
     plt.legend(["Train", "Test"], loc='upper left')
     plt.show()
 
+    plt.figure()
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
     plt.title('Model Loss')
@@ -219,6 +239,115 @@ def visualize_dl_training(history):
     plt.xlabel('Epoch')
     plt.legend(['Train', 'Test'], loc='upper left')
     plt.show()
+
+
+def visualize_trained_word_embedding(model, trained_tokenizer, vocab_size):
+    """
+    Save files for viewing with Tensorflow Projector
+    Go to https://projector.tensorflow.org and load the .tsv file
+    :param model: the trained model
+    :param trained_tokenizer: trained word tokenizer
+    :param vocab_size: size of the vocabulary
+    :return: None
+    """
+    # get the dictionary of words and frequencies in the corpus
+    word_index = trained_tokenizer.word_index
+    # reverse the key-value relationship in word_index
+    reverse_word_index = dict([(value, key) for (key, value) in word_index.items()])
+
+    # get the weights for the embedding layer
+    e = model.layers[0]
+    weights = e.get_weights()[0]
+
+    # write out the embedding vectors and metadata
+    # To view the visualization, go to https://projector.tensorflow.org
+    out_v = io.open('output/content_vectors.tsv', 'w', encoding='utf-8')
+    out_m = io.open('output/content_meta.tsv', 'w', encoding='utf-8')
+    for word_num in range(1, vocab_size):
+        word = reverse_word_index[word_num]
+        embeddings = weights[word_num]
+        out_m.write(word + '\n')
+        out_v.write('\t'.join([str(x) for x in embeddings]) + '\n')
+    # close files
+    out_m.close()
+    out_v.close()
+
+
+def build_nn_model(vocab_size, embedding_dim, max_length):
+    """
+    Construct a neural network with word embedding
+    :param vocab_size: size of the vocabulary
+    :param embedding_dim: embedding dimension
+    :param max_length: max length of the input sequences
+    :return: a keras model
+    """
+    return tf.keras.Sequential([
+        tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
+        tf.keras.layers.GlobalAveragePooling1D(),
+        tf.keras.layers.Dense(256, activation='relu'),
+        tf.keras.layers.Dropout(0.5),
+        tf.keras.layers.Dense(4, activation='relu'),
+        tf.keras.layers.Dense(1, activation='sigmoid')
+    ])
+
+
+def build_lstm_model2(vocab_size, embedding_dim, max_length):
+    """
+    Construct a LSTM model with word embedding
+    :param vocab_size: size of the vocabulary
+    :param embedding_dim: embedding dimension
+    :param max_length: max length of the input sequences
+    :return: a keras model
+    """
+    return tf.keras.Sequential([
+        tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Conv1D(64, 5, activation='relu'),
+        tf.keras.layers.MaxPool1D(pool_size=4),
+        tf.keras.layers.LSTM(20, return_sequences=True),
+        tf.keras.layers.LSTM(10),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dense(256),
+        tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dense(64),
+        tf.keras.layers.Dense(1, activation='sigmoid')
+    ])
+
+
+def build_gru_model(vocab_size, embedding_dim, max_length):
+    """
+    Construct a GRU model with word embedding
+    :param vocab_size: size of the vocabulary
+    :param embedding_dim: embedding dimension
+    :param max_length: max length of the input sequences
+    :return: a keras model
+    """
+    return tf.keras.Sequential([
+        tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
+        tf.keras.layers.GRU(units=30, dropout=0.2, recurrent_dropout=0.2,
+                            recurrent_activation='relu', activation='relu'),
+        tf.keras.layers.Dense(120, activation='relu'),
+        tf.keras.layers.Dropout(rate=0.2),
+        tf.keras.layers.Dense(1, activation='sigmoid')
+    ])
+
+
+def build_bidirectional_lstm_model(vocab_size, embedding_dim, max_length):
+    """
+    Construct a bidirectional LSTM model with word embedding
+    :param vocab_size: size of the vocabulary
+    :param embedding_dim: embedding dimension
+    :param max_length: max length of the input sequences
+    :return: a keras model
+    """
+    return tf.keras.Sequential([
+        tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
+        tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(64, return_sequences=True)),
+        tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32)),
+        tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.Dropout(0.5),
+        tf.keras.layers.Dense(1)
+    ])
 
 
 def deep_learning_model(df):
@@ -244,78 +373,31 @@ def deep_learning_model(df):
     # split the dataset
     X_train, X_test, Y_train, Y_test = train_test_split(features, labels, test_size=0.2, random_state=42, stratify=labels)
 
-    model = tf.keras.Sequential([
-        tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
-        tf.keras.layers.GlobalAveragePooling1D(),
-        tf.keras.layers.Dense(256, activation='relu'),
-        tf.keras.layers.Dropout(0.5),
-        tf.keras.layers.Dense(4, activation='relu'),
-        tf.keras.layers.Dense(1, activation='sigmoid')
-    ])
-    """
-    # neural network
-    model = tf.keras.Sequential([
-        tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
-        tf.keras.layers.GlobalAveragePooling1D(),
-        tf.keras.layers.Dense(10, activation='relu'),
-        tf.keras.layers.Dense(1, activation='sigmoid')
-    ])
-    
-    model = tf.keras.Sequential([
-        tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
-        tf.keras.layers.GlobalAveragePooling1D(),
-        tf.keras.layers.Dense(32, activation='relu'),
-        tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.Dense(32, activation='relu'),
-        tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.Dense(1, activation='sigmoid')
-    ])
-    
-    # LSTM model
-    model = tf.keras.Sequential([
-        tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
-        tf.keras.layers.Conv1D(64, 5, activation='relu'),
-        tf.keras.layers.MaxPool1D(),
-        tf.keras.layers.LSTM(20, return_sequences=True),
-        tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.Dense(512),
-        tf.keras.layers.Dropout(0.3),
-        tf.keras.layers.Dense(256),
-        tf.keras.layers.Dense(1, activation='sigmoid')
-    ])
-    
-    # LSTM model
-    model = tf.keras.Sequential([
-        tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
-        tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.Conv1D(64, 5, activation='relu'),
-        tf.keras.layers.MaxPool1D(pool_size=4),
-        tf.keras.layers.LSTM(20, return_sequences=True),
-        tf.keras.layers.LSTM(10),
-        tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.Dense(256),
-        tf.keras.layers.Dropout(0.3),
-        tf.keras.layers.Dense(64),
-        tf.keras.layers.Dense(1, activation='sigmoid')
-    ])
-    
-    # GRU model
-    model = tf.keras.Sequential([
-        tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
-        tf.keras.layers.GRU(units=30, dropout=0.2, recurrent_dropout=0.2,
-                            recurrent_activation='relu', activation='relu'),
-        tf.keras.layers.Dense(120, activation='relu'),
-        tf.keras.layers.Dropout(rate=0.2),
-        tf.keras.layers.Dense(1, activation='sigmoid')
-    ])
-    """
+    # build the model:
+    model = build_nn_model(vocab_size, embedding_dim, max_length)
+    #model = build_lstm_model2(vocab_size, embedding_dim, max_length)
+    #model = build_gru_model(vocab_size, embedding_dim, max_length)
+    #model = build_bidirectional_lstm_model(vocab_size, embedding_dim, max_length)
+
     # compile the model
-    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', precision_m, recall_m, f1_m])
+    #model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', precision_m, recall_m, f1_m])
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     model.summary()
 
+    # create training callbacks
+    early_stop_cb = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=3)
+    reduce_lr_cb = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=10, min_lr=0.001)
+
     # train the model
-    num_epoch = 20
-    history = model.fit(X_train, Y_train, epochs=num_epoch, validation_data=(X_test, Y_test))
+    num_epoch = 100
+    history = model.fit(X_train, Y_train,
+                        epochs=num_epoch,
+                        validation_data=(X_test, Y_test),
+                        callbacks=[early_stop_cb, reduce_lr_cb]
+                        )
+
+    # print the evaluation results on the test set
+    print(evaluate(model, X_test, Y_test, True))
 
     # visualize the training history
     visualize_dl_training(history)
@@ -323,27 +405,8 @@ def deep_learning_model(df):
     # plot the model
     plot_model(model, to_file="output/model_architecture.png")
 
-    # get the dictionary of words and frequencies in the corpus
-    word_index = trained_tokenizer.word_index
-    # reverse the key-value relationship in word_index
-    reverse_word_index = dict([(value, key) for (key, value) in word_index.items()])
-
-    # get the weights for the embedding layer
-    e = model.layers[0]
-    weights = e.get_weights()[0]
-
-    # write out the embedding vectors and metadata
-    # To view the visualization, go to https://projector.tensorflow.org
-    out_v = io.open('output/content_vectors.tsv', 'w', encoding='utf-8')
-    out_m = io.open('output/content_meta.tsv', 'w', encoding='utf-8')
-    for word_num in range(1, vocab_size):
-        word = reverse_word_index[word_num]
-        embeddings = weights[word_num]
-        out_m.write(word + '\n')
-        out_v.write('\t'.join([str(x) for x in embeddings]) + '\n')
-    # close files
-    out_m.close()
-    out_v.close()
+    # visualize the word embedding
+    visualize_trained_word_embedding(model, trained_tokenizer, vocab_size)
 
     return {
         "fit": model,
@@ -356,7 +419,7 @@ def deep_learning_model(df):
 
 def make_prediction(model_pack, file_path: str, model_name: str):
     """
-    Make prediction for a single file of news
+    Make prediction for a single news file
     :param model_pack: contained model weights and feature extracting transformers
     :param file_path: full file system path to the .txt file containing the news
     :param model_name: name of the model to use
