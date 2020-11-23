@@ -12,7 +12,7 @@ from sklearn.feature_extraction.text import (
     CountVectorizer,
     TfidfVectorizer
 )
-
+import re
 
 stop_words = []
 
@@ -44,14 +44,11 @@ def remove_stop_words(df):
     :return:new datafream and stop_words
     '''
     stop_words = stopwords.words('english')
-    stop_words.extend(['lot', 'close', 'her', 'to', 'for', 'with', 'and'])
+    stop_words.extend(['her', 'to', 'for', 'with', 'and'])
     df['clean'] = df['original'].apply(preprocess_stop_word)
     df['clean_joined'] = df['clean'].apply(lambda x: " ".join(x))
     print(tabulate(df.head(5), headers='keys', tablefmt='psql'))
     print(df.shape)
-    '''
-    
-    '''
     return df, stop_words
 
 
@@ -180,3 +177,18 @@ def tokenize_words(raw_data, max_length: int, tokenizer=None):
     padded = pad_sequences(sequences, maxlen=max_length, padding=padding_type, truncating=trunc_type)
 
     return padded, tokenizer
+
+def normalize(data):
+    normalized = []
+    for i in data:
+        i = i.lower()
+        # get rid of urls
+        i = re.sub('https?://\S+|www\.\S+', '', i)
+        # get rid of non words and extra spaces
+        i = re.sub('\\W', ' ', i)
+        i = re.sub('\n', '', i)
+        i = re.sub(' +', ' ', i)
+        i = re.sub('^ ', '', i)
+        i = re.sub(' $', '', i)
+        normalized.append(i)
+    return normalized

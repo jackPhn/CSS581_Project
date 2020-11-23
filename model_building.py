@@ -27,7 +27,8 @@ from keras.utils import plot_model
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from keras.models import Sequential
-from tensorflow.keras.layers import Embedding, Bidirectional, Dense, LSTM
+from tensorflow.keras.layers import Embedding, Bidirectional, Dense, LSTM, Dropout
+from keras.optimizers import Adam
 
 from feature_engineering import (
     tfidf_transform,
@@ -35,6 +36,7 @@ from feature_engineering import (
     extract_features,
     tokenize_words,
     process_feature_engineering,
+    normalize
 )
 
 from data_visualization import(
@@ -46,6 +48,7 @@ from keras_evaluation_metrics import (
     recall_m,
     f1_m
 )
+from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
 
 
 def evaluate(fit, X_test, Y_test):
@@ -404,44 +407,84 @@ def make_prediction(model_pack, file_path: str, model_name: str):
         print("This is legit news")
 
 def create_pad_sequence(df, total_words, maxlen):
+    MAX_SEQUENCE_LENGTH = 300
+    MAX_VOCAB = 10000
     x_train, x_test, y_train, y_test = train_test_split(df.clean_joined, df.is_fake, test_size=0.2)
     tokenizer = Tokenizer(num_words=total_words)
+
     # update internal vocabulary based on a list of tests
     tokenizer.fit_on_texts(x_train)
+
     # transformation each text into a sequences integer
     train_sequences = tokenizer.texts_to_sequences(x_train)
     test_sequences = tokenizer.texts_to_sequences(x_test)
-    padded_train = pad_sequences(train_sequences, maxlen=maxlen, padding='post', truncating='post')
-    padded_test = pad_sequences(test_sequences, maxlen=maxlen, padding='post', truncating='post')
-    # padded_train = pad_sequences(train_sequences, maxlen=1000, padding='post', truncating='post')
-    # padded_test = pad_sequences(test_sequences, maxlen=1000, padding='post', truncating='post')
+    padded_train = pad_sequences(train_sequences, maxlen=MAX_SEQUENCE_LENGTH, padding='post', truncating='post')
+    padded_test = pad_sequences(test_sequences, maxlen=MAX_SEQUENCE_LENGTH, padding='post', truncating='post')
     return padded_train, padded_test, y_train, y_test
 
-def build_lstm_model(padded_train, total_words, y_train):
-    # create sequential model
+def build_lstm_model(padded_train, padded_test, total_words, y_train, y_test):
+    # dictionary for storing weights
+    trained_models = dict()
+
+    sent_leng = 300
+    # # create sequential model
     model = Sequential()
 
     # embedding layer
-    model.add(Embedding(total_words, output_dim=240))
+    model.add(Embedding(total_words, output_dim=100, input_length=sent_leng))
 
     # Bi-directional RNN/LSTM
-    # model.add(Bidirectional(LSTM(128)))
-    model.add(LSTM(128))
+    model.add(Bidirectional(LSTM(100)))
 
     # Dense layers
-    model.add(Dense(128, activation='relu'))
+    model.add(Dense(64, activation='relu'))
+    model.add(Dropout(0.3))
+    # model.add(Dense(512)),
+    # model.add(Dropout(0.3)),
+    # model.add(Dense(256)),
     model.add(Dense(1, activation='sigmoid'))
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
+
+    model.compile(optimizer= 'adam', loss='binary_crossentropy', metrics=['accuracy'])
     model.summary()
+    # cp = ModelCheckpoint('model_Rnn.hdf5', monitor='val_acc', verbose=1, save_best_only=True)
     y_train = np.asarray(y_train)
 
-    # train the model
-    print(model.fit(padded_train, y_train, batch_size=64, validation_split=0.1, epochs=5))
+    early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=2, restore_best_weights=True)
+    # model.compile(loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
+    #               optimizer=tf.keras.optimizers.Adam(1e-4),
+    #               metrics=['accuracy'])
+    #
+    # history = model.fit(padded_train, y_train, batch_size=60, epochs=10, validation_split=0.2, shuffle=False, callbacks=[early_stop])
+    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.9, patience=5, min_lr=0.0000001, verbose=1)
+
+    # def coeff_determination(y_true, y_pred):
+    #     from keras import backend as K
+    #     SS_res = K.sum(K.square(y_true - y_pred))
+    #     SS_tot = K.sum(K.square(y_true - K.mean(y_true)))
+    #     return (1 - SS_res / (SS_tot + K.epsilon()))
+    #
+    # model.compile(loss='mse',
+    #               optimizer='nadam',
+    #               metrics=[coeff_determination, 'mse', 'mae', 'mape'])
+
+    history = model.fit(padded_train, y_train, validation_data=(padded_test, y_test), epochs=10, batch_size=60, shuffle=False, verbose=1, callbacks=[reduce_lr])
+    trained_models['lstm'] = history.history
+
+    # Write the results to .csv files
+    # trained_models.to_csv('output/lstm_train_results.csv')
+
+    # visualize the training history
+    visualize_dl_training(history)
 
     return model
 
 
 def predict_lstm_model(model, padded_test, y_test):
+    # create a data frame to store validation metrics and test metrics
+    metrics = {"Metrics": ['Accuracy', 'Precision', 'Recall', 'F1-Score', 'AUC']}
+    test_metrics_df = pd.DataFrame.from_dict(metrics)
+    test_metrics_df = pd.DataFrame.from_dict(metrics)
+
     pred = model.predict(padded_test)
     prediction = []
     # if the predicted value is > 0.5 it is real else it is fake
@@ -458,6 +501,20 @@ def predict_lstm_model(model, padded_test, y_test):
     f1score = f1_score(y_test, prediction)
     auc = roc_auc_score(y_test, prediction)
 
+    # pack the results into a data frame
+    values = {
+        "Value": [accuracy,
+                  precision,
+                  recall,
+                  f1score,
+                  auc]
+    }
+    test_metrics = pd.DataFrame.from_dict(values)
+    test_metrics_df['lstm'] = test_metrics["Value"]
+
+    # Write the results to .csv files
+    test_metrics_df.to_csv('output/lstm_test_results.csv')
+
     print("LSTM Model Accuracy: ", accuracy)
     print("LSTM Model Precision: ", precision)
     print("LSTM Model Recall: ", recall)
@@ -471,6 +528,6 @@ def create_lstm_predictive_model(df):
     # visualize_fake_word_cloud_plot(df_clean, stop_words)
     # visualize_ligit_word_cloud_plot(df_clean, stop_words)
     padded_train, padded_test, y_train, y_test = create_pad_sequence(df_clean, total_words, token_maxlen)
-    model = build_lstm_model(padded_train, total_words, y_train)
+    model = build_lstm_model(padded_train, padded_test, total_words, y_train, y_test)
     prediction = predict_lstm_model(model, padded_test, y_test)
     visualize_confusion_matrix(prediction, y_test)
