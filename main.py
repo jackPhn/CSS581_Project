@@ -110,7 +110,7 @@ def main():
     # -------------------------------------------------
 
     # LSTM and RNN
-    create_lstm_predictive_model(news_df)
+    # create_lstm_predictive_model(news_df)
 
     # -------------------------------------------------------------------------------------------------
     # shuffle the dataset
