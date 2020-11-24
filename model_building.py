@@ -349,7 +349,25 @@ def build_bidirectional_lstm_model(vocab_size, embedding_dim, max_length):
         tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32)),
         tf.keras.layers.Dense(64, activation='relu'),
         tf.keras.layers.Dropout(0.5),
-        tf.keras.layers.Dense(1)
+        tf.keras.layers.Dense(1, activation='sigmoid')
+    ])
+
+
+def build_combined_cnn_lstm_model(vocab_size, embedding_dim, max_length):
+    """
+    Construct a combined CNN-LSTM model with word embedding
+    :param vocab_size: size of the vocabulary
+    :param embedding_dim: embedding dimension
+    :param max_length: max length of the input sequences
+    :return: a keras model
+    """
+    return tf.keras.Sequential([
+        tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
+        tf.keras.layers.Conv1D(filters=64, kernel_size=5, strides=1, padding='valid', activation='relu'),
+        tf.keras.layers.MaxPool1D(4),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.LSTM(100),
+        tf.keras.layers.Dense(1, activation='sigmoid')
     ])
 
 
@@ -378,9 +396,10 @@ def deep_learning_model(df):
 
     # build the model:
     model = build_nn_model(vocab_size, embedding_dim, max_length)
-    model = build_lstm_model2(vocab_size, embedding_dim, max_length)
+    #model = build_lstm_model2(vocab_size, embedding_dim, max_length)
     #model = build_gru_model(vocab_size, embedding_dim, max_length)
     #model = build_bidirectional_lstm_model(vocab_size, embedding_dim, max_length)
+    model = build_combined_cnn_lstm_model(vocab_size, embedding_dim, max_length)
 
     # compile the model
     #model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', precision_m, recall_m, f1_m])
