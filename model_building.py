@@ -338,6 +338,7 @@ def build_gru_model(vocab_size, embedding_dim, max_length):
 def build_bidirectional_lstm_model(vocab_size, embedding_dim, max_length):
     """
     Construct a bidirectional LSTM model with word embedding
+    Citation: Umer M., et al, "Fake News Stance Detection Using Deep Learning Architecture (CNN-LSTM)"
     :param vocab_size: size of the vocabulary
     :param embedding_dim: embedding dimension
     :param max_length: max length of the input sequences
