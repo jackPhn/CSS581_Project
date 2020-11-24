@@ -324,9 +324,12 @@ def build_gru_model(vocab_size, embedding_dim, max_length):
     """
     return tf.keras.Sequential([
         tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
-        tf.keras.layers.GRU(units=30, dropout=0.2, recurrent_dropout=0.2,
-                            recurrent_activation='relu', activation='relu'),
-        tf.keras.layers.Dense(120, activation='relu'),
+        tf.keras.layers.GRU(units=64, dropout=0.2, recurrent_dropout=0.2,
+                            recurrent_activation='sigmoid', activation='tanh'),
+        tf.keras.layers.Dropout(0.1),
+        tf.keras.layers.Dense(128, activation='relu'),
+        tf.keras.layers.Dropout(rate=0.5),
+        tf.keras.layers.Dense(64, activation='relu'),
         tf.keras.layers.Dropout(rate=0.2),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
@@ -375,7 +378,7 @@ def deep_learning_model(df):
 
     # build the model:
     model = build_nn_model(vocab_size, embedding_dim, max_length)
-    #model = build_lstm_model2(vocab_size, embedding_dim, max_length)
+    model = build_lstm_model2(vocab_size, embedding_dim, max_length)
     #model = build_gru_model(vocab_size, embedding_dim, max_length)
     #model = build_bidirectional_lstm_model(vocab_size, embedding_dim, max_length)
 
