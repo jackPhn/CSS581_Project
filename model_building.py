@@ -400,7 +400,7 @@ def deep_learning_model(df):
     #model = build_lstm_model2(vocab_size, embedding_dim, max_length)
     #model = build_gru_model(vocab_size, embedding_dim, max_length)
     #model = build_bidirectional_lstm_model(vocab_size, embedding_dim, max_length)
-    model = build_combined_cnn_lstm_model(vocab_size, embedding_dim, max_length)
+    #model = build_combined_cnn_lstm_model(vocab_size, embedding_dim, max_length)
 
     # compile the model
     #model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', precision_m, recall_m, f1_m])
