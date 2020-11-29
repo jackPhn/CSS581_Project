@@ -158,7 +158,7 @@ def main():
             is_dl = input("Deep learning? (Y or N)").lower()
 
             if is_dl == 'n':
-                #using grid search to find the best parameters for several models
+                # using grid search to find the best parameters for several models
                 print("Performing grid search for non-deep-learning models")
                 none_dl_grid_search(news_df)
 
