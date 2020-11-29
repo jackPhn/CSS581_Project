@@ -1,16 +1,17 @@
 import numpy as np
 import pandas as pd
 from tabulate import tabulate
-import math
-
-import seaborn as sns
-import nltk
 from nltk import ngrams
 import collections
+import matplotlib.pyplot as plt
 
 
 def validate_null_value(news_df):
-
+    """
+    Check the input dataframe for null values
+    :param news_df: input dataframe
+    :return: None
+    """
     print(tabulate(news_df.head(5), headers='keys', tablefmt='psql'))
     print(news_df.shape)
 
@@ -24,15 +25,16 @@ def validate_null_value(news_df):
     print(np.sum(pd.isna(news_df)))
 
     # validate if there is any null value
-    bool = news_df.isnull().values.any()
-    print("Is there any null value? " + str(bool))
-
-    # check for data type
-    print("Display data type of all columns")
-    print(news_df.dtypes)
+    is_null = news_df.isnull().values.any()
+    print("Is there any null value? " + str(is_null))
 
 
-def validate_unique_recored(news_df):
+def validate_unique_record(news_df):
+    """
+    Check unique values in the label
+    :param news_df: Input dataframe
+    :return: None
+    """
     # Find the unique value of is_fake column
     print("Display the unique Values of is_fake")
     print(news_df.is_fake.unique())
@@ -78,3 +80,43 @@ def ngram_frequency(text: str, n: int = 2):
 
     return ngram_counter
 
+
+def visualize_composition(fake_news, real_news):
+    """
+    Visualize the composition of the input dataset
+    :param fake_news: fake news dataframe
+    :param real_news: real news dataframe
+    :return: None
+    """
+    # Categories of news
+    # business      = 1
+    # education     = 2
+    # entertainment = 3
+    # politics      = 4
+    # sport         = 5
+    # tech          = 6
+    # celebrity     = 7
+    labels = ['Business', 'Education', 'Entertainment', 'Politics', 'Sport', 'Technology', 'Celebrity']
+
+    # Get the counts of the categories in reversed order
+    fake_news_counts = fake_news['Category'].value_counts().tolist()
+    real_news_counts = real_news['Category'].value_counts().tolist()
+    # reverse the order
+    fake_news_counts.reverse()
+    real_news_counts.reverse()
+
+    x = np.arange(len(labels))  # the label locations
+    width = 0.35  # the width of the bars
+
+    fig, ax = plt.subplots()
+    rects1 = ax.bar(x - width / 2, fake_news_counts, width, label='Fake')
+    rects2 = ax.bar(x + width / 2, real_news_counts, width, label='Real')
+
+    # Add some text for labels, title and custom x-axis tick labels, etc.
+    ax.set_ylabel('Count')
+    ax.set_title('Composition of the Fake News Dataset')
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+    ax.legend()
+    plt.xticks(rotation=90)
+    plt.show()

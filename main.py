@@ -9,9 +9,10 @@ from data_compilation import (
 
 from data_exploration import (
     validate_null_value,
-    validate_unique_recored,
+    validate_unique_record,
     ngram_frequency,
-    word_frequency
+    word_frequency,
+    visualize_composition
 )
 from model_building import (
     classical_models,
@@ -51,63 +52,72 @@ def main():
     news_df = clean_text(news_df, "Content", "Content")
     news_df = clean_text(news_df, "Title", "Title")
 
-    # find the longest news content
-    max_content_length = np.max([len(news) for news in news_df['Content'].tolist()])
-    print("The number of words in the longest piece of news is:", max_content_length)
-    print()
-
-    # find out the total number of unique words in the corpus
-    news_contents = np.array(news_df['Content'].tolist())
-    news_df_joined = " ".join(news_contents).lower()
-    unique_words = list(word_frequency(news_df_joined).keys())
-    print("The number of unique words in the news contents is:", len(unique_words))
-    print()
-
-    # find missing values
-    validate_null_value(news_df)
-    validate_unique_recored(news_df)
-
     # -------------------------------------------------------------------------------------------------
-    # concatenate all contents of real news
-    real_news_contents = np.array(real_news_df['Content'].tolist())
-    real_news_joined = " ".join(real_news_contents)
+    # Data exploration
+    response = input("Do you want to perform data exploration? Enter (Y)es or (N)o").lower()
+    if response == 'y':
+        # find the longest news content
+        max_content_length = np.max([len(news) for news in news_df['Content'].tolist()])
+        print("The number of words in the longest piece of news is:", max_content_length)
+        print()
 
-    # Find ngrams
-    real_news_ngram_fred = ngram_frequency(real_news_joined, 3)
-    print()
-    print("Frequency of the 20 most common ngrams in real news:")
-    print(real_news_ngram_fred.most_common(20))
+        # find out the total number of unique words in the corpus
+        news_contents = np.array(news_df['Content'].tolist())
+        news_df_joined = " ".join(news_contents).lower()
+        unique_words = list(word_frequency(news_df_joined).keys())
+        print("The number of unique words in the news contents is:", len(unique_words))
+        print()
 
-    # find frequencies of words
-    real_news_word_fred = word_frequency(real_news_joined)
-    print()
-    print("Frequency of the 20 most common words in real news:")
-    print(real_news_word_fred.most_common(20))
+        # find missing values
+        validate_null_value(news_df)
+        validate_unique_record(news_df)
 
-    # --------------------------------------------------------------------
-    # concatenate all contents of fake news
-    fake_news_contents = np.array(fake_news_df['Content'].tolist())
-    fake_news_joined = " ".join(fake_news_contents)
+        # ---------------------------------------------------------------------------------------------
+        # concatenate all contents of real news
+        real_news_contents = np.array(real_news_df['Content'].tolist())
+        real_news_joined = " ".join(real_news_contents)
 
-    # Find ngrams
-    fake_news_ngram_fred = ngram_frequency(fake_news_joined, 3)
-    print()
-    print("Frequency of the 20 most common ngrams in fake news:")
-    print(fake_news_ngram_fred.most_common(20))
+        # Find ngrams
+        real_news_ngram_fred = ngram_frequency(real_news_joined, 3)
+        print()
+        print("Frequency of the 20 most common ngrams in real news:")
+        print(real_news_ngram_fred.most_common(20))
 
-    # find frequencies of words
-    fake_news_word_fred = word_frequency(fake_news_joined)
-    print()
-    print("Frequency of the 20 most common words in fake news:")
-    print(fake_news_word_fred.most_common(20))
-    print()
+        # find frequencies of words
+        real_news_word_fred = word_frequency(real_news_joined)
+        print()
+        print("Frequency of the 20 most common words in real news:")
+        print(real_news_word_fred.most_common(20))
 
-    # -------------------------------------------------------------------------------------------------
-    # Visualization
-    # visualize_real_fake(news_df)
-    # visualize_news_celebrity(news_df)
-    # visulaize_fake_legit(news_df)
-    # -------------------------------------------------
+        # ---------------------------------------------------------------------------------------------
+        # concatenate all contents of fake news
+        fake_news_contents = np.array(fake_news_df['Content'].tolist())
+        fake_news_joined = " ".join(fake_news_contents)
+
+        # Find ngrams
+        fake_news_ngram_fred = ngram_frequency(fake_news_joined, 3)
+        print()
+        print("Frequency of the 20 most common ngrams in fake news:")
+        print(fake_news_ngram_fred.most_common(20))
+
+        # find frequencies of words
+        fake_news_word_fred = word_frequency(fake_news_joined)
+        print()
+        print("Frequency of the 20 most common words in fake news:")
+        print(fake_news_word_fred.most_common(20))
+        print()
+
+        # ---------------------------------------------------------------------------------------------
+        # Data visualization
+        visualize_composition(fake_news_df, real_news_df)
+
+
+        # ---------------------------------------------------------------------------------------------
+        # Visualization
+        #visualize_real_fake(news_df)
+        #visualize_news_celebrity(news_df)
+        #visulaize_fake_legit(news_df)
+
 
     # LSTM and RNN
     # create_lstm_predictive_model(news_df)

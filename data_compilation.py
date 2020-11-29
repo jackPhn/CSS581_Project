@@ -53,22 +53,22 @@ def get_dataset_from_file(dataset: str, is_fake: bool, is_news:bool):
             contents.append(content)
 
         # assign the category
-        # celebrity     = 1
-        # business      = 2
-        # education     = 3
-        # entertainment = 4
-        # politics      = 5
-        # sport         = 6
-        # tech          = 7
+        # business      = 1
+        # education     = 2
+        # entertainment = 3
+        # politics      = 4
+        # sport         = 5
+        # tech          = 6
+        # celebrity     = 7
         if is_news:
-            if filename[0:3] == "biz": categories.append(2)
-            if filename[0:3] == "edu": categories.append(3)
-            if filename[0:3] == "ent": categories.append(4)
-            if filename[0:3] == "pol": categories.append(5)
-            if filename[0:3] == "spo": categories.append(6)
-            if filename[0:3] == "tec": categories.append(7)
+            if filename[0:3] == "biz": categories.append(1)
+            if filename[0:3] == "edu": categories.append(2)
+            if filename[0:3] == "ent": categories.append(3)
+            if filename[0:3] == "pol": categories.append(4)
+            if filename[0:3] == "spo": categories.append(5)
+            if filename[0:3] == "tec": categories.append(6)
         else:
-            categories.append(1)
+            categories.append(7)
 
     newsDf = pd.DataFrame({'Title': titles, 'Content': contents, 'Category': categories})
 
