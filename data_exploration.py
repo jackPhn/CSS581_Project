@@ -81,13 +81,17 @@ def ngram_frequency(text: str, n: int = 2):
     return ngram_counter
 
 
-def visualize_composition(fake_news, real_news):
+def visualize_composition(df):
     """
     Visualize the composition of the input dataset
     :param fake_news: fake news dataframe
     :param real_news: real news dataframe
     :return: None
     """
+    # separate real from fake
+    fake_news = df[df['is_fake'] == 1]
+    real_news = df[df['is_fake'] == 0]
+
     # Categories of news
     # business      = 1
     # education     = 2

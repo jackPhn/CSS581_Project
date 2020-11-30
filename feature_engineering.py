@@ -26,7 +26,7 @@ def process_feature_engineering(df):
 
 def combine_two_columns(df, first_column, second_column, new_column):
     '''
-    :param df: data fram
+    :param df: dataframe
     :param first_column: first column to be combined
     :param second_column: seconed column to be combined
     :param new_column: the new column to be named
@@ -177,6 +177,7 @@ def tokenize_words(raw_data, max_length: int, tokenizer=None):
     padded = pad_sequences(sequences, maxlen=max_length, padding=padding_type, truncating=trunc_type)
 
     return padded, tokenizer
+
 
 def normalize(data):
     normalized = []

@@ -156,7 +156,7 @@ def classical_models(df):
 
     # model
     models = {
-        "Logistic Regression": LogisticRegression(),
+        "Logistic Regression": LogisticRegression(n_jobs=8, solver='lbfgs'),
         "Gaussian NB": GaussianNB(),
         "Decision Tree": DecisionTreeClassifier(),
         "Random Forest": RandomForestClassifier(),
@@ -419,8 +419,26 @@ def deep_learning_model(df):
                         callbacks=[early_stop_cb, reduce_lr_cb]
                         )
 
+    # create a data frame to store validation metrics and test metrics
+    metrics = {"Metrics": ['Accuracy', 'Precision', 'Recall', 'F1-Score', 'AUC']}
+    test_metrics_df = pd.DataFrame.from_dict(metrics)
+
+    # evaluate the model on the test set
+    test_metrics = evaluate(model, X_test, Y_test, True)
+    # pack the results into a data frame
+    values = {
+        "Value": [test_metrics['accuracy'],
+                  test_metrics['precision'],
+                  test_metrics['recall'],
+                  test_metrics['f_score'],
+                  test_metrics['auc']]
+    }
+    test_metrics = pd.DataFrame.from_dict(values)
+    test_metrics_df['Value'] = test_metrics["Value"]
     # print the evaluation results on the test set
-    print(evaluate(model, X_test, Y_test, True))
+    print(test_metrics_df)
+    # save the result to file
+    test_metrics_df.to_csv("output/dl_test_result.csv")
 
     # visualize the training history
     visualize_dl_training(history)

@@ -109,7 +109,7 @@ def main():
 
         # ---------------------------------------------------------------------------------------------
         # Data visualization
-        visualize_composition(fake_news_df, real_news_df)
+        visualize_composition(news_df)
 
 
         # ---------------------------------------------------------------------------------------------
@@ -126,9 +126,10 @@ def main():
     # shuffle the dataset
     news_df = news_df.sample(frac=1, random_state=1).reset_index(drop=True)
 
-    response = input("Do you want to perform cross validation (v) or hyperparameter tuning (t)?").lower()
+    run_again = True
+    while run_again:
+        response = input("Do you want to perform cross validation (v) or hyperparameter tuning (t)?").lower()
 
-    while True:
         if response == 'v':
             is_dl = input("Deep learning? (Y or N)").lower()
 
@@ -167,9 +168,10 @@ def main():
                 print("Performing grid search for deep learning model")
                 dl_grid_search(news_df)
 
+        # ask if the user wants to execute again
         is_end = input("Do you want to continue? (Y or N)").lower()
         if is_end == 'n':
-            break
+            run_again = False
 
 
 # Press the green button in the gutter to run the script.
