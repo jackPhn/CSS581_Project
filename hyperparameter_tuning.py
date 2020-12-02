@@ -41,6 +41,32 @@ def none_dl_grid_search(df):
 
     # create models and parameters
     model_params = {
+        'Logistic Regression': {
+            'model': LogisticRegression(n_jobs=8, solver='lbfgs'),
+            'params': {
+                'C': [1, 2, 5, 10]
+            }
+        },
+        'Decision Tree': {
+            'model': DecisionTreeClassifier(),
+            'params': {
+                'splitter': ['best', 'random']
+            }
+        },
+        'Random Forest': {
+            'model': RandomForestClassifier(),
+            'params': {
+                'n_estimators': [50, 100, 200, 300]
+            }
+        },
+        'SVM': {
+            'model': SVC(gamma='auto', kernel='poly', probability=True),
+            'params': {
+                'C': [1, 2, 5, 10],
+                'gamma': ['auto', 'scale'],
+                'kernel': ['rbf', 'poly', 'sigmoid']
+            }
+        },
         'XGBoost': {
             'model': XGBClassifier(n_jobs=8),
             'params': {
@@ -50,42 +76,6 @@ def none_dl_grid_search(df):
             }
         }
     }
-    """
-    'Logistic Regression': {
-        'model': LogisticRegression(n_jobs=8, solver='lbfgs'),
-        'params': {
-            'C': [1, 2, 5, 10]
-        }
-    },
-    'Decision Tree': {
-        'model': DecisionTreeClassifier(),
-        'params': {
-            'splitter': ['best', 'random']
-        }
-    },
-    Random Forest': {
-        'model': RandomForestClassifier(),
-        'params': {
-            'n_estimators': [50, 100, 200, 300]
-        }
-    },
-    'SVM': {
-        'model': SVC(gamma='auto', kernel='poly', probability=True),
-        'params': {
-            'C': [1, 2, 5, 10]
-            'gamma': ['auto', 'scale'],
-            'kernel': ['rbf', 'poly', 'sigmoid']
-        }
-    },
-    'XGBoost': {
-        'model': XGBClassifier(n_jobs=8),
-        'params': {
-            'n_estimators': [50, 100, 200, 300],
-            'max_depth': [5, 10, 15],
-            'learning_rate': [0.1, 0.2, 0.3]
-        }
-    }
-    """
 
     # list of scores
     scores = []

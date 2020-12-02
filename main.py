@@ -135,7 +135,7 @@ def main():
 
             if is_dl == 'n':
                 # cross validation and training for classical models
-                print("Performing cross validation and training models")
+                print("Performing cross validation and training on classical machine learning models")
                 classic_pack = classical_models(news_df)
 
             else:

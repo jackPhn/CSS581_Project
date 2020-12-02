@@ -1,6 +1,7 @@
 import io
 import pandas as pd
 import numpy as np
+import time
 import matplotlib.pyplot as plt
 from sklearn.model_selection import (
     train_test_split,
@@ -61,7 +62,6 @@ def evaluate(fit, X_test, Y_test, is_dl: bool = False):
     :return: a dictionary of metrics
     """
     predictions = np.array(fit.predict(X_test))
-    #predictions_proba = np.array([])
 
     # deal with deep learning model
     pred = []
@@ -81,6 +81,8 @@ def evaluate(fit, X_test, Y_test, is_dl: bool = False):
         predictions_proba = predictions_proba[:, 1]
 
     return {
+        "predictions": predictions,
+        "probability": predictions_proba,
         "accuracy": accuracy_score(Y_test, predictions),
         "precision": precision_score(Y_test, predictions),
         "recall": recall_score(Y_test, predictions),
@@ -136,6 +138,47 @@ def cross_validate(model, features, labels):
     return metrics_df
 
 
+def break_down_results_by_category(model_name, indices, Y, predictions):
+    """
+
+    :param model_name: name of the model of interest
+    :param indices: a dictionary of indices of the categories in the test set
+    :param Y: labels of the test set
+    :param predictions: list of predictions on the test set [predictions, predictive probability]
+    :return:
+    """
+    pred = predictions[0]
+    pred_proba = predictions[1]
+
+    results = []
+    dataframe_indices = []
+
+    for category, ind in indices.items():
+        pred_by_category = [pred[i] for i in ind]
+        pred_proba_by_category = [pred_proba[i] for i in ind]
+        labels = [Y[i] for i in ind]
+
+        results.append([
+            accuracy_score(labels, pred_by_category),
+            precision_score(labels, pred_by_category),
+            recall_score(labels, pred_by_category),
+            f1_score(labels, pred_by_category),
+            roc_auc_score(labels, pred_proba_by_category)
+        ])
+
+        dataframe_indices.append("Class " + str(category))
+
+    multi_col = pd.MultiIndex.from_tuples([
+        (model_name, 'Accuracy'), (model_name, 'Precision'), (model_name, 'Recall'),
+        (model_name, 'F1-Score'), (model_name, 'AUC')
+    ])
+
+    results_by_category = pd.DataFrame(results, index=dataframe_indices, columns=multi_col)
+    results_by_category = results_by_category.stack()
+
+    return results_by_category
+
+
 def classical_models(df):
     """
     Build classical models and perform cross validation and evaluate the performance on test set
@@ -151,17 +194,38 @@ def classical_models(df):
     feature_pack = extract_features(X)
     features = feature_pack['features']
 
-    # split the dataset 80 / 20 for train and test
+    # extract the category column in original dataset
+    category_col = df['Category'].tolist()
+    category_col = np.reshape(category_col, (-1, 1))
+
+    # join the list of categories to the feature matrix
+    features = np.hstack([features, category_col])
+
+    # split the dataset 80% / 20% for train and test
     X_train, X_test, Y_train, Y_test = train_test_split(features, labels, test_size=0.2, random_state=0, stratify=labels)
+
+    # convert to numpy array
+    X_train = np.array(X_train)
+    X_test = np.array(X_test)
+
+    # extract the list of categories in the test set
+    testset_categories = X_test[:, -1]
+
+    print(np.bincount(testset_categories.astype('int')))
+
+    # build a dictionary of the indices of different categories in the test set
+    indices = {}
+    for category in range(1, 8):
+        indices[category] = [i for i, x in enumerate(testset_categories) if int(x) == category]
 
     # model
     models = {
-        "Logistic Regression": LogisticRegression(n_jobs=8, solver='lbfgs'),
-        "Gaussian NB": GaussianNB(),
-        "Decision Tree": DecisionTreeClassifier(),
-        "Random Forest": RandomForestClassifier(),
-        "XGBoost": XGBClassifier(n_jobs=8),
-        "SVM": SVC(gamma='auto', kernel='poly', probability=True),
+        "Logistic Regression": LogisticRegression(n_jobs=8, solver='lbfgs', C=2), # no C
+        #"Gaussian NB": GaussianNB(),
+        #"Decision Tree": DecisionTreeClassifier(splitter='best'), #no spliter
+        #"Random Forest": RandomForestClassifier(n_estimators=300),  # no estimator
+        #"XGBoost": XGBClassifier(n_jobs=8),
+        #"SVM": SVC(gamma='auto', kernel='poly', probability=True),
     }
 
     # create a data frame to store validation metrics and test metrics
@@ -170,16 +234,19 @@ def classical_models(df):
     test_metrics_df = pd.DataFrame.from_dict(metrics)
 
     # dictionary for storing weights
-    trained_models = dict()
+    trained_models = {}
 
+    results_by_category = []
     for name, model in models.items():
         print("Working on", name)
         # k-fold cross validation
-        metrics_df = cross_validate(model, X_train, Y_train)
+        metrics_df = cross_validate(model, X_train[:, 0:X_train.shape[1]], Y_train)
         validation_metrics_df[name] = metrics_df["Value"]
 
         # train the model
         fit = model.fit(X_train, Y_train)
+
+        # Store the trained model for later user
         trained_models[name] = fit
 
         # evaluate the model on the test set
@@ -195,6 +262,16 @@ def classical_models(df):
         test_metrics = pd.DataFrame.from_dict(values)
         test_metrics_df[name] = test_metrics["Value"]
 
+        # break down the results for different categories of news
+        results_by_category.append(break_down_results_by_category(
+            model, indices, X_test, [test_metrics['predictions'], test_metrics['probability']]
+        ))
+
+    # join results by categories for different models to one dataframe
+    results_by_category_df = results_by_category[0]
+    for i in range(1, len(results_by_category)):
+        results_by_category_df = results_by_category_df.join(results_by_category[i])
+
     # display the results
     print("Cross validation results:")
     print(validation_metrics_df)
@@ -202,6 +279,11 @@ def classical_models(df):
 
     print("Test set's evaluation results:")
     print(test_metrics_df)
+    print()
+
+    print("Test set's results by news categories:")
+    print(results_by_category_df)
+    print()
 
     # Write the results to .csv files
     validation_metrics_df.to_csv('output/validation_results.csv')
@@ -411,8 +493,9 @@ def deep_learning_model(df):
     early_stop_cb = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=3)
     reduce_lr_cb = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=10, min_lr=0.001)
 
-    # train the model
+    # define the number of training epochs
     num_epoch = 100
+    # train the model
     history = model.fit(X_train, Y_train,
                         epochs=num_epoch,
                         validation_data=(X_test, Y_test),
