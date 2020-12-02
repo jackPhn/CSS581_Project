@@ -138,13 +138,14 @@ def cross_validate(model, features, labels):
     return metrics_df
 
 
-def break_down_results_by_category(model_name, indices, Y, predictions):
+def break_down_results_by_category(model_name, indices, Y, predictions, category_sizes):
     """
-
+    Break down the results for different categories of news
     :param model_name: name of the model of interest
     :param indices: a dictionary of indices of the categories in the test set
     :param Y: labels of the test set
     :param predictions: list of predictions on the test set [predictions, predictive probability]
+    :param category_sizes: list of the sizes of the categories. Index - 1 is the id of a category
     :return:
     """
     pred = predictions[0]
@@ -166,7 +167,7 @@ def break_down_results_by_category(model_name, indices, Y, predictions):
             roc_auc_score(labels, pred_proba_by_category)
         ])
 
-        dataframe_indices.append("Class " + str(category))
+        dataframe_indices.append("Class " + str(category) + "(size = " + str(category_sizes[int(category) - 1]) + ")")
 
     multi_col = pd.MultiIndex.from_tuples([
         (model_name, 'Accuracy'), (model_name, 'Precision'), (model_name, 'Recall'),
@@ -210,8 +211,7 @@ def classical_models(df):
 
     # extract the list of categories in the test set
     testset_categories = X_test[:, -1]
-
-    print(np.bincount(testset_categories.astype('int')))
+    category_sizes = np.bincount(testset_categories.astype('int'))[1:]
 
     # build a dictionary of the indices of different categories in the test set
     indices = {}
@@ -220,12 +220,12 @@ def classical_models(df):
 
     # model
     models = {
-        "Logistic Regression": LogisticRegression(n_jobs=8, solver='lbfgs', C=2), # no C
-        #"Gaussian NB": GaussianNB(),
-        #"Decision Tree": DecisionTreeClassifier(splitter='best'), #no spliter
-        #"Random Forest": RandomForestClassifier(n_estimators=300),  # no estimator
-        #"XGBoost": XGBClassifier(n_jobs=8),
-        #"SVM": SVC(gamma='auto', kernel='poly', probability=True),
+        "Logistic Regression": LogisticRegression(n_jobs=8, solver='lbfgs', C=2),  # no C
+        "Gaussian NB": GaussianNB(),
+        "Decision Tree": DecisionTreeClassifier(splitter='best'),   # no spliter
+        "Random Forest": RandomForestClassifier(n_estimators=300),  # no estimator
+        "XGBoost": XGBClassifier(n_jobs=8),
+        "SVM": SVC(gamma='auto', kernel='poly', probability=True),
     }
 
     # create a data frame to store validation metrics and test metrics
@@ -244,33 +244,38 @@ def classical_models(df):
         validation_metrics_df[name] = metrics_df["Value"]
 
         # train the model
-        fit = model.fit(X_train, Y_train)
+        # don't use the category information for training
+        fit = model.fit(X_train[:, 0:X_train.shape[1]], Y_train)
 
         # Store the trained model for later user
         trained_models[name] = fit
 
         # evaluate the model on the test set
-        test_metrics = evaluate(fit, X_test, Y_test)
+        test_results = evaluate(fit, X_test[:, 0:X_test.shape[1]], Y_test)
         # pack the results into a data frame
         values = {
-            "Value": [test_metrics['accuracy'],
-                      test_metrics['precision'],
-                      test_metrics['recall'],
-                      test_metrics['f_score'],
-                      test_metrics['auc']]
+            "Value": [test_results['accuracy'],
+                      test_results['precision'],
+                      test_results['recall'],
+                      test_results['f_score'],
+                      test_results['auc']]
         }
         test_metrics = pd.DataFrame.from_dict(values)
         test_metrics_df[name] = test_metrics["Value"]
 
         # break down the results for different categories of news
-        results_by_category.append(break_down_results_by_category(
-            model, indices, X_test, [test_metrics['predictions'], test_metrics['probability']]
-        ))
+        results_by_category.append(
+            break_down_results_by_category(name, indices, Y_test,
+                                           [test_results['predictions'], test_results['probability']],
+                                           category_sizes
+                                           )
+        )
 
     # join results by categories for different models to one dataframe
     results_by_category_df = results_by_category[0]
     for i in range(1, len(results_by_category)):
         results_by_category_df = results_by_category_df.join(results_by_category[i])
+    results_by_category_df.to_csv('output/none_dl_results_by_category.csv')
 
     # display the results
     print("Cross validation results:")
@@ -363,14 +368,15 @@ def build_nn_model(vocab_size, embedding_dim, max_length):
     :param max_length: max length of the input sequences
     :return: a keras model
     """
-    return tf.keras.Sequential([
-        tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
-        tf.keras.layers.GlobalAveragePooling1D(),
-        tf.keras.layers.Dense(256, activation='relu'),
-        tf.keras.layers.Dropout(0.5),
-        tf.keras.layers.Dense(4, activation='relu'),
-        tf.keras.layers.Dense(1, activation='sigmoid')
-    ])
+    return "Neural Network", \
+           tf.keras.Sequential([
+               tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
+               tf.keras.layers.GlobalAveragePooling1D(),
+               tf.keras.layers.Dense(256, activation='relu'),
+               tf.keras.layers.Dropout(0.5),
+               tf.keras.layers.Dense(4, activation='relu'),
+               tf.keras.layers.Dense(1, activation='sigmoid')
+           ])
 
 
 def build_lstm_model2(vocab_size, embedding_dim, max_length):
@@ -381,19 +387,20 @@ def build_lstm_model2(vocab_size, embedding_dim, max_length):
     :param max_length: max length of the input sequences
     :return: a keras model
     """
-    return tf.keras.Sequential([
-        tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
-        tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.Conv1D(64, 5, activation='relu'),
-        tf.keras.layers.MaxPool1D(pool_size=4),
-        tf.keras.layers.LSTM(20, return_sequences=True),
-        tf.keras.layers.LSTM(10),
-        tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.Dense(256),
-        tf.keras.layers.Dropout(0.3),
-        tf.keras.layers.Dense(64),
-        tf.keras.layers.Dense(1, activation='sigmoid')
-    ])
+    return "LSTM", \
+           tf.keras.Sequential([
+               tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
+               tf.keras.layers.Dropout(0.2),
+               tf.keras.layers.Conv1D(64, 5, activation='relu'),
+               tf.keras.layers.MaxPool1D(pool_size=4),
+               tf.keras.layers.LSTM(20, return_sequences=True),
+               tf.keras.layers.LSTM(10),
+               tf.keras.layers.Dropout(0.2),
+               tf.keras.layers.Dense(256),
+               tf.keras.layers.Dropout(0.3),
+               tf.keras.layers.Dense(64),
+               tf.keras.layers.Dense(1, activation='sigmoid')
+           ])
 
 
 def build_gru_model(vocab_size, embedding_dim, max_length):
@@ -404,17 +411,18 @@ def build_gru_model(vocab_size, embedding_dim, max_length):
     :param max_length: max length of the input sequences
     :return: a keras model
     """
-    return tf.keras.Sequential([
-        tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
-        tf.keras.layers.GRU(units=64, dropout=0.2, recurrent_dropout=0.2,
-                            recurrent_activation='sigmoid', activation='tanh'),
-        tf.keras.layers.Dropout(0.1),
-        tf.keras.layers.Dense(128, activation='relu'),
-        tf.keras.layers.Dropout(rate=0.5),
-        tf.keras.layers.Dense(64, activation='relu'),
-        tf.keras.layers.Dropout(rate=0.2),
-        tf.keras.layers.Dense(1, activation='sigmoid')
-    ])
+    return "GRU",\
+           tf.keras.Sequential([
+               tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
+               tf.keras.layers.GRU(units=64, dropout=0.2, recurrent_dropout=0.2,
+                                   recurrent_activation='sigmoid', activation='tanh'),
+               tf.keras.layers.Dropout(0.1),
+               tf.keras.layers.Dense(128, activation='relu'),
+               tf.keras.layers.Dropout(rate=0.5),
+               tf.keras.layers.Dense(64, activation='relu'),
+               tf.keras.layers.Dropout(rate=0.2),
+               tf.keras.layers.Dense(1, activation='sigmoid')
+           ])
 
 
 def build_bidirectional_lstm_model(vocab_size, embedding_dim, max_length):
@@ -426,14 +434,14 @@ def build_bidirectional_lstm_model(vocab_size, embedding_dim, max_length):
     :param max_length: max length of the input sequences
     :return: a keras model
     """
-    return tf.keras.Sequential([
-        tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
-        tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(64, return_sequences=True)),
-        tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32)),
-        tf.keras.layers.Dense(64, activation='relu'),
-        tf.keras.layers.Dropout(0.5),
-        tf.keras.layers.Dense(1, activation='sigmoid')
-    ])
+    return "Bidirectional LSTM",\
+           tf.keras.Sequential([
+               tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
+               tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(64, return_sequences=True)),
+               tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32)),
+               tf.keras.layers.Dense(64, activation='relu'),
+               tf.keras.layers.Dropout(0.5),tf.keras.layers.Dense(1, activation='sigmoid')
+           ])
 
 
 def build_combined_cnn_lstm_model(vocab_size, embedding_dim, max_length):
@@ -444,14 +452,15 @@ def build_combined_cnn_lstm_model(vocab_size, embedding_dim, max_length):
     :param max_length: max length of the input sequences
     :return: a keras model
     """
-    return tf.keras.Sequential([
-        tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
-        tf.keras.layers.Conv1D(filters=64, kernel_size=5, strides=1, padding='valid', activation='relu'),
-        tf.keras.layers.MaxPool1D(4),
-        tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.LSTM(100),
-        tf.keras.layers.Dense(1, activation='sigmoid')
-    ])
+    return "Combined CNN-LSTM",\
+           tf.keras.Sequential([
+               tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
+               tf.keras.layers.Conv1D(filters=64, kernel_size=5, strides=1, padding='valid', activation='relu'),
+               tf.keras.layers.MaxPool1D(4),
+               tf.keras.layers.Dropout(0.2),
+               tf.keras.layers.LSTM(100),
+               tf.keras.layers.Dense(1, activation='sigmoid')
+           ])
 
 
 def deep_learning_model(df):
@@ -471,18 +480,38 @@ def deep_learning_model(df):
     # tokenize the words
     features, trained_tokenizer = tokenize_words(raw_data=X[:, 1], max_length=max_length)
 
+    # extract the category column in original dataset
+    category_col = df['Category'].tolist()
+    category_col = np.reshape(category_col, (-1, 1))
+
+    # join the list of categories to the feature matrix
+    features = np.hstack([features, category_col])
+
     # get the size of the vocabulary from the tokenizer
     vocab_size = len(trained_tokenizer.word_index)
 
     # split the dataset
-    X_train, X_test, Y_train, Y_test = train_test_split(features, labels, test_size=0.2, random_state=42, stratify=labels)
+    X_train, X_test, Y_train, Y_test = train_test_split(features, labels, test_size=0.2, random_state=0, stratify=labels)
+
+    # convert to numpy array
+    X_train = np.array(X_train)
+    X_test = np.array(X_test)
+
+    # extract the list of categories in the test set
+    testset_categories = X_test[:, -1]
+    category_sizes = np.bincount(testset_categories.astype('int'))[1:]
+
+    # build a dictionary of the indices of different categories in the test set
+    indices = {}
+    for category in range(1, 8):
+        indices[category] = [i for i, x in enumerate(testset_categories) if int(x) == category]
 
     # build the model:
-    model = build_nn_model(vocab_size, embedding_dim, max_length)
-    #model = build_lstm_model2(vocab_size, embedding_dim, max_length)
-    #model = build_gru_model(vocab_size, embedding_dim, max_length)
-    #model = build_bidirectional_lstm_model(vocab_size, embedding_dim, max_length)
-    #model = build_combined_cnn_lstm_model(vocab_size, embedding_dim, max_length)
+    model_name, model = build_nn_model(vocab_size, embedding_dim, max_length)
+    #model_name, model = build_lstm_model2(vocab_size, embedding_dim, max_length)
+    #model_name, model = build_gru_model(vocab_size, embedding_dim, max_length)
+    #model_name, model = build_bidirectional_lstm_model(vocab_size, embedding_dim, max_length)
+    #model_name, model = build_combined_cnn_lstm_model(vocab_size, embedding_dim, max_length)
 
     # compile the model
     #model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', precision_m, recall_m, f1_m])
@@ -496,25 +525,26 @@ def deep_learning_model(df):
     # define the number of training epochs
     num_epoch = 100
     # train the model
-    history = model.fit(X_train, Y_train,
+    history = model.fit(X_train[:, 0:X_train.shape[1]-1], Y_train,
                         epochs=num_epoch,
-                        validation_data=(X_test, Y_test),
+                        validation_data=(X_test[:, 0:X_test.shape[1]-1], Y_test),
                         callbacks=[early_stop_cb, reduce_lr_cb]
                         )
 
     # create a data frame to store validation metrics and test metrics
-    metrics = {"Metrics": ['Accuracy', 'Precision', 'Recall', 'F1-Score', 'AUC']}
+    metrics = {"Metrics": ['Epoch', 'Accuracy', 'Precision', 'Recall', 'F1-Score', 'AUC']}
     test_metrics_df = pd.DataFrame.from_dict(metrics)
 
     # evaluate the model on the test set
-    test_metrics = evaluate(model, X_test, Y_test, True)
+    test_results = evaluate(model, X_test[:, 0:X_test.shape[1]-1], Y_test, True)
     # pack the results into a data frame
     values = {
-        "Value": [test_metrics['accuracy'],
-                  test_metrics['precision'],
-                  test_metrics['recall'],
-                  test_metrics['f_score'],
-                  test_metrics['auc']]
+        "Value": [early_stop_cb.stopped_epoch,
+                  test_results['accuracy'],
+                  test_results['precision'],
+                  test_results['recall'],
+                  test_results['f_score'],
+                  test_results['auc']]
     }
     test_metrics = pd.DataFrame.from_dict(values)
     test_metrics_df['Value'] = test_metrics["Value"]
@@ -522,6 +552,25 @@ def deep_learning_model(df):
     print(test_metrics_df)
     # save the result to file
     test_metrics_df.to_csv("output/dl_test_result.csv")
+
+    # break down the results for different categories of news
+    results_by_category = []
+    results_by_category.append(
+        break_down_results_by_category(model_name, indices, Y_test,
+                                       [test_results['predictions'], test_results['probability']],
+                                       category_sizes
+                                       )
+    )
+
+    # join results by categories for different models to one dataframe
+    results_by_category_df = results_by_category[0]
+    for i in range(1, len(results_by_category)):
+        results_by_category_df = results_by_category_df.join(results_by_category[i])
+    results_by_category_df.to_csv('output/dl_results_by_category.csv')
+    # display
+    print("Test set's results by news categories:")
+    print(results_by_category_df)
+    print()
 
     # visualize the training history
     visualize_dl_training(history)
@@ -593,6 +642,7 @@ def make_prediction(model_pack, file_path: str, model_name: str):
     else:
         print("This is legit news")
 
+
 def create_pad_sequence(df, total_words, maxlen):
     MAX_SEQUENCE_LENGTH = 300
     MAX_VOCAB = 10000
@@ -608,6 +658,7 @@ def create_pad_sequence(df, total_words, maxlen):
     padded_train = pad_sequences(train_sequences, maxlen=MAX_SEQUENCE_LENGTH, padding='post', truncating='post')
     padded_test = pad_sequences(test_sequences, maxlen=MAX_SEQUENCE_LENGTH, padding='post', truncating='post')
     return padded_train, padded_test, y_train, y_test
+
 
 def build_lstm_model(padded_train, padded_test, total_words, y_train, y_test):
     # dictionary for storing weights
