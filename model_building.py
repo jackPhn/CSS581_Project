@@ -221,8 +221,8 @@ def classical_models(df):
 
     # model
     models = {
-        "Logistic Regression": LogisticRegression(n_jobs=8, solver='lbfgs', C=2),  # no C
-        #"Gaussian NB": GaussianNB(),
+        #"Logistic Regression": LogisticRegression(n_jobs=8, solver='lbfgs', C=2),  # no C
+        "Gaussian NB": GaussianNB(),
         #"Decision Tree": DecisionTreeClassifier(splitter='best'),   # no spliter
         #"Random Forest": RandomForestClassifier(n_estimators=300),  # no estimator
         #"XGBoost": XGBClassifier(n_jobs=8),
@@ -241,18 +241,18 @@ def classical_models(df):
     for model_name, model in models.items():
         print("Working on", model_name)
         # k-fold cross validation
-        metrics_df = cross_validate(model, X_train[:, 0:X_train.shape[1]], Y_train)
+        metrics_df = cross_validate(model, X_train[:, 0:X_train.shape[1]-1], Y_train)
         validation_metrics_df[model_name] = metrics_df["Value"]
 
         # train the model
         # don't use the category information for training
-        fit = model.fit(X_train[:, 0:X_train.shape[1]], Y_train)
+        fit = model.fit(X_train[:, 0:X_train.shape[1]-1], Y_train)
 
         # Store the trained model for later user
         trained_models[model_name] = fit
 
         # evaluate the model on the test set
-        test_results = evaluate(fit, X_test[:, 0:X_test.shape[1]], Y_test)
+        test_results = evaluate(fit, X_test[:, 0:X_test.shape[1]-1], Y_test)
         # pack the results into a data frame
         values = {
             "Value": [test_results['accuracy'],
@@ -273,7 +273,7 @@ def classical_models(df):
         )
 
         # save the model for later use
-        filename = 'output/' + model_name.replace(' ', '') + '_model' + '.pkl'
+        filename = 'output/' + model_name.replace(' ', '') + '_Model' + '.pkl'
         with open(filename, 'wb') as f:
             pickle.dump(model, f)
 
@@ -301,7 +301,7 @@ def classical_models(df):
     test_metrics_df.to_csv('output/test_results.csv')
 
     # save the feature transformers for later use
-    with open("output/none_df_input_transformers.pkl", 'wb') as file:
+    with open("output/none_dl_input_transformers.pkl", 'wb') as file:
         pickle.dump((feature_pack['cv_ngram'], feature_pack['tfidf_content'], feature_pack['tfidf_title']), file)
 
     return {
@@ -597,13 +597,11 @@ def deep_learning_model(df):
     visualize_trained_word_embedding(model, trained_tokenizer, vocab_size)
 
     # save the tokenizer for later use
-    with open("output/train_tokenizer.plk", 'wb') as outfile:
+    with open("output/trained_tokenizer.pkl", 'wb') as outfile:
         pickle.dump(trained_tokenizer, outfile)
     # save the embedding dimensions for later use
-    with open("output/embedding_dims.txt", 'wb') as outfile:
-        outfile.write(str(vocab_size))
-        outfile.write(str(embedding_dim))
-        outfile.write(str(max_length))
+    with open("output/embedding_dims.txt", 'w') as outfile:
+        outfile.writelines(str(vocab_size) + " " + str(embedding_dim) + " " + str(max_length))
 
     return {
         "fit": model,
@@ -643,7 +641,7 @@ def make_prediction(fit, input_transformers, file_path: str, is_dl: bool):
         trained_tokenizer = input_transformers['tokenizer']
         vocab_size = input_transformers['vocab_size']
         max_length = input_transformers['max_length']
-        sample, _ = tokenize_words(content, vocab_size, max_length, trained_tokenizer)
+        sample, _ = tokenize_words(content, max_length, trained_tokenizer)
     else:
         # classical model
         #models = input_transformers['models']

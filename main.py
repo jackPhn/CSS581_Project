@@ -171,24 +171,19 @@ def main():
                 print("Performing grid search for deep learning model")
                 dl_grid_search(news_df)
 
+        # -------------------------------------------------------------------------------------------------
         # check the output folder for saved models
         cwd = os.getcwd()
         output_dir = os.path.join(cwd, 'output')
         model_files = []
         model_names = []
         model_extensions = []
-        dl_tokenizer_fname = None
-        none_dl_transformers_fname = None
         for fname in os.listdir(output_dir):
-            if fname.endswith('_model.pkl') or fname.endswith('.h5'):
+            if fname.endswith('_Model.pkl') or fname.endswith('.h5'):
                 model_files.append(fname)
                 name = fname.split('.')
                 model_names.append(name[0])
                 model_extensions.append(name[1])
-            elif fname.endswith("transformers.pkl"):
-                none_dl_transformers_fname = fname
-            elif fname.endswith("tokenizer.pkl"):
-                dl_tokenizer_fname = fname
 
         # ask if the user want to make a prediction if there are saved models
         want_to_predict = input("Do you want to make a prediction? (Y)es or (N)o?").lower()
@@ -206,6 +201,7 @@ def main():
                     model = pickle.load(infile)
 
                 # load the feature transformers
+                none_dl_transformers_fname = 'none_dl_input_transformers.pkl'
                 with open(os.path.join(cwd, "output/" + none_dl_transformers_fname), 'rb') as infile:
                     cv_ngram, tfidf_content, tfidf_title = pickle.load(infile)
                 input_transformers = {'cv_ngram': cv_ngram, 'tfidf_content': tfidf_content, 'tfidf_title': tfidf_title}
@@ -217,14 +213,19 @@ def main():
                 model = tf.keras.models.load_model(os.path.join(cwd, "output/" + model_files[model_index]))
 
                 # load the tokenizer
+                dl_tokenizer_fname = 'trained_tokenizer.pkl'
                 with open(os.path.join(cwd, "output/" + dl_tokenizer_fname), 'rb') as infile:
                     trained_tokenizer = pickle.load(infile)
 
-                # load the embedding parameters
-                with open(os.path.join(cwd, "output/" + "embedding_dims.txt"), 'rb') as infile:
-
-
                 input_transformers = {'tokenizer': trained_tokenizer}
+
+                # load the embedding parameters
+                with open(os.path.join(cwd, "output/" + "embedding_dims.txt"), 'r') as infile:
+                    line = infile.readline()
+                    values = line.split(' ')
+                    input_transformers['vocab_size'] = int(values[0])
+                    input_transformers['embedding_dim'] = int(values[1])
+                    input_transformers['max_length'] = int(values[2])
 
                 is_dl = True
 
@@ -234,6 +235,7 @@ def main():
             # make a prediction
             print("Making a prediction with", model_names[model_index])
             make_prediction(model, input_transformers, input_path, is_dl)
+            print()
 
         # ask if the user wants to execute again
         is_end = input("Do you want to continue? (Y or N)").lower()
