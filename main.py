@@ -1,5 +1,8 @@
 import numpy as np
 import pandas as pd
+import os
+import pickle
+import tensorflow as tf
 
 from data_compilation import (
     build_real_news_dataframe,
@@ -128,7 +131,7 @@ def main():
 
     run_again = True
     while run_again:
-        response = input("Do you want to perform cross validation (v) or hyperparameter tuning (t)?").lower()
+        response = input("Do you want to perform cross validation (v) or hyperparameter tuning (t)? Press any other keys to skip.").lower()
 
         if response == 'v':
             is_dl = input("Deep learning? (Y or N)").lower()
@@ -167,6 +170,70 @@ def main():
                 # hyperparameter tuning for deep learning model
                 print("Performing grid search for deep learning model")
                 dl_grid_search(news_df)
+
+        # check the output folder for saved models
+        cwd = os.getcwd()
+        output_dir = os.path.join(cwd, 'output')
+        model_files = []
+        model_names = []
+        model_extensions = []
+        dl_tokenizer_fname = None
+        none_dl_transformers_fname = None
+        for fname in os.listdir(output_dir):
+            if fname.endswith('_model.pkl') or fname.endswith('.h5'):
+                model_files.append(fname)
+                name = fname.split('.')
+                model_names.append(name[0])
+                model_extensions.append(name[1])
+            elif fname.endswith("transformers.pkl"):
+                none_dl_transformers_fname = fname
+            elif fname.endswith("tokenizer.pkl"):
+                dl_tokenizer_fname = fname
+
+        # ask if the user want to make a prediction if there are saved models
+        want_to_predict = input("Do you want to make a prediction? (Y)es or (N)o?").lower()
+
+        confirm_predict = True if want_to_predict == 'y' else False
+
+        # prompt model select
+        if confirm_predict:
+            print("Available models are:", model_names)
+            model_index = int(input("Enter the 0-based index of a model in the list above to select: "))
+
+            if model_extensions[model_index] == 'pkl':
+                # load the classical model
+                with open(os.path.join(cwd, "output/" + model_files[model_index]), 'rb') as infile:
+                    model = pickle.load(infile)
+
+                # load the feature transformers
+                with open(os.path.join(cwd, "output/" + none_dl_transformers_fname), 'rb') as infile:
+                    cv_ngram, tfidf_content, tfidf_title = pickle.load(infile)
+                input_transformers = {'cv_ngram': cv_ngram, 'tfidf_content': tfidf_content, 'tfidf_title': tfidf_title}
+
+                is_dl = False
+
+            else:
+                # load the deep learning model
+                model = tf.keras.models.load_model(os.path.join(cwd, "output/" + model_files[model_index]))
+
+                # load the tokenizer
+                with open(os.path.join(cwd, "output/" + dl_tokenizer_fname), 'rb') as infile:
+                    trained_tokenizer = pickle.load(infile)
+
+                # load the embedding parameters
+                with open(os.path.join(cwd, "output/" + "embedding_dims.txt"), 'rb') as infile:
+
+
+                input_transformers = {'tokenizer': trained_tokenizer}
+
+                is_dl = True
+
+            # prompt for a file
+            input_path = input("Enter the absolute path to the input file: ")
+
+            # make a prediction
+            print("Making a prediction with", model_names[model_index])
+            make_prediction(model, input_transformers, input_path, is_dl)
 
         # ask if the user wants to execute again
         is_end = input("Do you want to continue? (Y or N)").lower()

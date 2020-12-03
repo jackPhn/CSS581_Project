@@ -1,7 +1,8 @@
 import io
+import os
 import pandas as pd
 import numpy as np
-import time
+import pickle
 import matplotlib.pyplot as plt
 from sklearn.model_selection import (
     train_test_split,
@@ -221,11 +222,11 @@ def classical_models(df):
     # model
     models = {
         "Logistic Regression": LogisticRegression(n_jobs=8, solver='lbfgs', C=2),  # no C
-        "Gaussian NB": GaussianNB(),
-        "Decision Tree": DecisionTreeClassifier(splitter='best'),   # no spliter
-        "Random Forest": RandomForestClassifier(n_estimators=300),  # no estimator
-        "XGBoost": XGBClassifier(n_jobs=8),
-        "SVM": SVC(gamma='auto', kernel='poly', probability=True),
+        #"Gaussian NB": GaussianNB(),
+        #"Decision Tree": DecisionTreeClassifier(splitter='best'),   # no spliter
+        #"Random Forest": RandomForestClassifier(n_estimators=300),  # no estimator
+        #"XGBoost": XGBClassifier(n_jobs=8),
+        #"SVM": SVC(gamma='auto', kernel='poly', probability=True),
     }
 
     # create a data frame to store validation metrics and test metrics
@@ -237,18 +238,18 @@ def classical_models(df):
     trained_models = {}
 
     results_by_category = []
-    for name, model in models.items():
-        print("Working on", name)
+    for model_name, model in models.items():
+        print("Working on", model_name)
         # k-fold cross validation
         metrics_df = cross_validate(model, X_train[:, 0:X_train.shape[1]], Y_train)
-        validation_metrics_df[name] = metrics_df["Value"]
+        validation_metrics_df[model_name] = metrics_df["Value"]
 
         # train the model
         # don't use the category information for training
         fit = model.fit(X_train[:, 0:X_train.shape[1]], Y_train)
 
         # Store the trained model for later user
-        trained_models[name] = fit
+        trained_models[model_name] = fit
 
         # evaluate the model on the test set
         test_results = evaluate(fit, X_test[:, 0:X_test.shape[1]], Y_test)
@@ -261,15 +262,20 @@ def classical_models(df):
                       test_results['auc']]
         }
         test_metrics = pd.DataFrame.from_dict(values)
-        test_metrics_df[name] = test_metrics["Value"]
+        test_metrics_df[model_name] = test_metrics["Value"]
 
         # break down the results for different categories of news
         results_by_category.append(
-            break_down_results_by_category(name, indices, Y_test,
+            break_down_results_by_category(model_name, indices, Y_test,
                                            [test_results['predictions'], test_results['probability']],
                                            category_sizes
                                            )
         )
+
+        # save the model for later use
+        filename = 'output/' + model_name.replace(' ', '') + '_model' + '.pkl'
+        with open(filename, 'wb') as f:
+            pickle.dump(model, f)
 
     # join results by categories for different models to one dataframe
     results_by_category_df = results_by_category[0]
@@ -293,6 +299,10 @@ def classical_models(df):
     # Write the results to .csv files
     validation_metrics_df.to_csv('output/validation_results.csv')
     test_metrics_df.to_csv('output/test_results.csv')
+
+    # save the feature transformers for later use
+    with open("output/none_df_input_transformers.pkl", 'wb') as file:
+        pickle.dump((feature_pack['cv_ngram'], feature_pack['tfidf_content'], feature_pack['tfidf_title']), file)
 
     return {
         "models": trained_models,
@@ -531,6 +541,11 @@ def deep_learning_model(df):
                         callbacks=[early_stop_cb, reduce_lr_cb]
                         )
 
+    # save the models for later use
+    cwd = os.getcwd()
+    filename = os.path.join(cwd, 'output/' + model_name.replace(' ', '') + '.h5')
+    model.save(filename)
+
     # create a data frame to store validation metrics and test metrics
     metrics = {"Metrics": ['Epoch', 'Accuracy', 'Precision', 'Recall', 'F1-Score', 'AUC']}
     test_metrics_df = pd.DataFrame.from_dict(metrics)
@@ -581,6 +596,15 @@ def deep_learning_model(df):
     # visualize the word embedding
     visualize_trained_word_embedding(model, trained_tokenizer, vocab_size)
 
+    # save the tokenizer for later use
+    with open("output/train_tokenizer.plk", 'wb') as outfile:
+        pickle.dump(trained_tokenizer, outfile)
+    # save the embedding dimensions for later use
+    with open("output/embedding_dims.txt", 'wb') as outfile:
+        outfile.write(str(vocab_size))
+        outfile.write(str(embedding_dim))
+        outfile.write(str(max_length))
+
     return {
         "fit": model,
         "tokenizer": trained_tokenizer,
@@ -590,12 +614,13 @@ def deep_learning_model(df):
     }
 
 
-def make_prediction(model_pack, file_path: str, model_name: str):
+def make_prediction(fit, input_transformers, file_path: str, is_dl: bool):
     """
     Make prediction for a single news file
-    :param model_pack: contained model weights and feature extracting transformers
+    :param fit: trained model
+    :param input_transformers: a dictionary contained feature extracting transformers
     :param file_path: full file system path to the .txt file containing the news
-    :param model_name: name of the model to use
+    :param is_dl: whether the model is deep learning related
     :return: none
     """
     print("Make prediction for", file_path)
@@ -612,20 +637,20 @@ def make_prediction(model_pack, file_path: str, model_name: str):
         content_lines = file.read().splitlines()
         content.append(" ".join(content_lines))
 
-    if model_name == "dl":
+    if is_dl:
         # deep learning model
-        fit = model_pack['fit']
-        trained_tokenizer = model_pack['tokenizer']
-        vocab_size = model_pack['vocab_size']
-        max_length = model_pack['max_length']
+        #fit = input_transformers['fit']
+        trained_tokenizer = input_transformers['tokenizer']
+        vocab_size = input_transformers['vocab_size']
+        max_length = input_transformers['max_length']
         sample, _ = tokenize_words(content, vocab_size, max_length, trained_tokenizer)
     else:
-        # other classical models
-        models = model_pack['models']
-        fit = models[model_name]
-        cv_ngram = model_pack['cv_ngram']
-        tfidf_title = model_pack['tfidf_title']
-        tfidf_content = model_pack['tfidf_content']
+        # classical model
+        #models = input_transformers['models']
+        #fit = models[model_name]
+        cv_ngram = input_transformers['cv_ngram']
+        tfidf_title = input_transformers['tfidf_title']
+        tfidf_content = input_transformers['tfidf_content']
 
         # extract features
         mat_title, _ = tfidf_transform(raw_data=title, tfidf_vectorizer=tfidf_title)
