@@ -46,6 +46,118 @@ from feature_engineering import(
 )
 
 
+def build_validate_and_tune(news_df):
+    """
+    Helper function to build models, validate, and tune hyperparameters
+    :param news_df: news dataframe
+    :return: None
+    """
+    # as the user for a specific action
+    response = input(
+        "Do you want to perform cross validation (v) or hyperparameter tuning (t)? Press any other keys to skip.").lower()
+
+    # build models and validate
+    if response == 'v':
+        is_dl = input("Deep learning? (Y or N)").lower()
+
+        if is_dl == 'n':
+            # cross validation and training for classical models
+            print("Performing cross validation and training on classical machine learning models")
+            classic_pack = classical_models(news_df)
+
+        else:
+            # deep learning model with word embedding
+            print("Evaluating and training a deep learning model")
+            dl_pack = deep_learning_model(news_df)
+
+    # tune hyperparameters
+    elif response == 't':
+        is_dl = input("Deep learning? (Y or N)").lower()
+
+        if is_dl == 'n':
+            # using grid search to find the best parameters for several classical models
+            print("Performing grid search for non-deep-learning models")
+            none_dl_grid_search(news_df)
+
+        else:
+            # hyperparameter tuning for deep learning model
+            print("Performing grid search for deep learning model")
+            dl_grid_search(news_df)
+
+
+def predict_single_case():
+    """
+    Helper function to make a prediction on an article using saved models
+    :return: None
+    """
+    # check the output folder for saved models
+    cwd = os.getcwd()
+    output_dir = os.path.join(cwd, 'output')
+    # names of files that store saved models
+    model_files = []
+    # names of saved models
+    model_names = []
+    # extension of a model files
+    model_extensions = []
+    for fname in os.listdir(output_dir):
+        if fname.endswith('_Model.pkl') or fname.endswith('.h5'):
+            model_files.append(fname)
+            name = fname.split('.')
+            model_names.append(name[0])
+            model_extensions.append(name[1])
+
+    # ask if the user want to make a prediction if there are saved models
+    want_to_predict = input("Do you want to make a prediction? (Y)es or (N)o?").lower()
+    confirm_predict = True if want_to_predict == 'y' else False
+
+    # prompt model select
+    if confirm_predict:
+        print("Available models are:", model_names)
+        model_index = int(input("Enter the 0-based index of a model in the list above to select: "))
+
+        if model_extensions[model_index] == 'pkl':
+            # load the classical model
+            with open(os.path.join(cwd, "output/" + model_files[model_index]), 'rb') as infile:
+                model = pickle.load(infile)
+
+            # load the feature transformers
+            none_dl_transformers_fname = 'none_dl_input_transformers.pkl'
+            with open(os.path.join(cwd, "output/" + none_dl_transformers_fname), 'rb') as infile:
+                cv_ngram, tfidf_content, tfidf_title = pickle.load(infile)
+            input_transformers = {'cv_ngram': cv_ngram, 'tfidf_content': tfidf_content, 'tfidf_title': tfidf_title}
+
+            is_dl = False
+
+        else:
+            # load the deep learning model
+            model = tf.keras.models.load_model(os.path.join(cwd, "output/" + model_files[model_index]))
+
+            # load the tokenizer
+            dl_tokenizer_fname = 'trained_tokenizer.pkl'
+            with open(os.path.join(cwd, "output/" + dl_tokenizer_fname), 'rb') as infile:
+                trained_tokenizer = pickle.load(infile)
+
+            input_transformers = {'tokenizer': trained_tokenizer}
+
+            # load the embedding parameters
+            with open(os.path.join(cwd, "output/" + "embedding_dims.txt"), 'r') as infile:
+                line = infile.readline()
+                values = line.split(' ')
+                input_transformers['vocab_size'] = int(values[0])
+                input_transformers['embedding_dim'] = int(values[1])
+                input_transformers['max_length'] = int(values[2])
+
+            is_dl = True
+
+        # prompt for a file
+        input_path = input("Enter the absolute path to the input file: ")
+
+        # make a prediction
+        print("Making a prediction with", model_names[model_index])
+        make_prediction(model, input_transformers, input_path, is_dl)
+        print()
+
+
 def main():
     # data loading
     real_news_df = build_real_news_dataframe(include_celeb=True)
@@ -129,113 +241,15 @@ def main():
     # shuffle the dataset
     news_df = news_df.sample(frac=1, random_state=1).reset_index(drop=True)
 
+    # start execution loop
     run_again = True
     while run_again:
-        response = input("Do you want to perform cross validation (v) or hyperparameter tuning (t)? Press any other keys to skip.").lower()
 
-        if response == 'v':
-            is_dl = input("Deep learning? (Y or N)").lower()
+        # build models, validate, and tune hyperparameters
+        build_validate_and_tune(news_df)
 
-            if is_dl == 'n':
-                # cross validation and training for classical models
-                print("Performing cross validation and training on classical machine learning models")
-                classic_pack = classical_models(news_df)
-
-            else:
-                # deep learning model with word embedding
-                print("Evaluating and training a deep learning model")
-                dl_pack = deep_learning_model(news_df)
-
-            # change the file path below to the absolute file path of a sample used to make prediction on
-            # sample_file_path = "/Users/jack/programming/machine_learning/CSS581_Project_Repo/CSS581_Project/fakeNewsDatasets/fakeNewsDataset/fake/tech008.fake.txt"
-
-            # make a prediction
-            # model_name = "Logistic Regression"
-            # print("Making a prediction with", model_name)
-            # make_prediction(classic_pack, sample_file_path, model_name)
-
-            # make a prediction
-            #print("Making a prediction with the deep learning model")
-            #make_prediction(dl_pack, sample_file_path, "dl")
-
-        elif response == 't':
-            is_dl = input("Deep learning? (Y or N)").lower()
-
-            if is_dl == 'n':
-                # using grid search to find the best parameters for several models
-                print("Performing grid search for non-deep-learning models")
-                none_dl_grid_search(news_df)
-
-            else:
-                # hyperparameter tuning for deep learning model
-                print("Performing grid search for deep learning model")
-                dl_grid_search(news_df)
-
-        # -------------------------------------------------------------------------------------------------
-        # check the output folder for saved models
-        cwd = os.getcwd()
-        output_dir = os.path.join(cwd, 'output')
-        model_files = []
-        model_names = []
-        model_extensions = []
-        for fname in os.listdir(output_dir):
-            if fname.endswith('_Model.pkl') or fname.endswith('.h5'):
-                model_files.append(fname)
-                name = fname.split('.')
-                model_names.append(name[0])
-                model_extensions.append(name[1])
-
-        # ask if the user want to make a prediction if there are saved models
-        want_to_predict = input("Do you want to make a prediction? (Y)es or (N)o?").lower()
-
-        confirm_predict = True if want_to_predict == 'y' else False
-
-        # prompt model select
-        if confirm_predict:
-            print("Available models are:", model_names)
-            model_index = int(input("Enter the 0-based index of a model in the list above to select: "))
-
-            if model_extensions[model_index] == 'pkl':
-                # load the classical model
-                with open(os.path.join(cwd, "output/" + model_files[model_index]), 'rb') as infile:
-                    model = pickle.load(infile)
-
-                # load the feature transformers
-                none_dl_transformers_fname = 'none_dl_input_transformers.pkl'
-                with open(os.path.join(cwd, "output/" + none_dl_transformers_fname), 'rb') as infile:
-                    cv_ngram, tfidf_content, tfidf_title = pickle.load(infile)
-                input_transformers = {'cv_ngram': cv_ngram, 'tfidf_content': tfidf_content, 'tfidf_title': tfidf_title}
-
-                is_dl = False
-
-            else:
-                # load the deep learning model
-                model = tf.keras.models.load_model(os.path.join(cwd, "output/" + model_files[model_index]))
-
-                # load the tokenizer
-                dl_tokenizer_fname = 'trained_tokenizer.pkl'
-                with open(os.path.join(cwd, "output/" + dl_tokenizer_fname), 'rb') as infile:
-                    trained_tokenizer = pickle.load(infile)
-
-                input_transformers = {'tokenizer': trained_tokenizer}
-
-                # load the embedding parameters
-                with open(os.path.join(cwd, "output/" + "embedding_dims.txt"), 'r') as infile:
-                    line = infile.readline()
-                    values = line.split(' ')
-                    input_transformers['vocab_size'] = int(values[0])
-                    input_transformers['embedding_dim'] = int(values[1])
-                    input_transformers['max_length'] = int(values[2])
-
-                is_dl = True
-
-            # prompt for a file
-            input_path = input("Enter the absolute path to the input file: ")
-
-            # make a prediction
-            print("Making a prediction with", model_names[model_index])
-            make_prediction(model, input_transformers, input_path, is_dl)
-            print()
+        # make a prediction on a news article
+        predict_single_case()
 
         # ask if the user wants to execute again
         is_end = input("Do you want to continue? (Y or N)").lower()

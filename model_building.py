@@ -221,12 +221,12 @@ def classical_models(df):
 
     # model
     models = {
-        #"Logistic Regression": LogisticRegression(n_jobs=8, solver='lbfgs', C=2),  # no C
+        "Logistic Regression": LogisticRegression(n_jobs=8, solver='lbfgs', C=2),  # no C
         "Gaussian NB": GaussianNB(),
-        #"Decision Tree": DecisionTreeClassifier(splitter='best'),   # no spliter
-        #"Random Forest": RandomForestClassifier(n_estimators=300),  # no estimator
-        #"XGBoost": XGBClassifier(n_jobs=8),
-        #"SVM": SVC(gamma='auto', kernel='poly', probability=True),
+        "Decision Tree": DecisionTreeClassifier(splitter='best'),   # no spliter
+        "Random Forest": RandomForestClassifier(n_estimators=300),  # no estimator
+        "XGBoost": XGBClassifier(n_jobs=8),
+        "SVM": SVC(gamma='auto', kernel='poly', probability=True),
     }
 
     # create a data frame to store validation metrics and test metrics
