@@ -63,12 +63,12 @@ def build_validate_and_tune(news_df):
         if is_dl == 'n':
             # cross validation and training for classical models
             print("Performing cross validation and training on classical machine learning models")
-            classic_pack = classical_models(news_df)
+            classical_models(news_df)
 
         else:
             # deep learning model with word embedding
             print("Evaluating and training a deep learning model")
-            dl_pack = deep_learning_model(news_df)
+            deep_learning_model(news_df)
 
     # tune hyperparameters
     elif response == 't':

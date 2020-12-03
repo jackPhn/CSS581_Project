@@ -97,7 +97,7 @@ def none_dl_grid_search(df):
     print(scores)
     print(resultsDF)
     # save the results
-    resultsDF.to_csv('output/none_dl_grid_search_results.csv')
+    resultsDF.to_csv('output/classical_results/none_dl_grid_search_results.csv')
 
 
 # setup hyperparameter experiment
@@ -109,7 +109,7 @@ HP_OPTIMIZER = hp.HParam('optimizer', hp.Discrete(['adam', 'sgd', 'RMSprop']))
 HP_NUM_UNITS_2 = hp.HParam('num units 2', hp.Discrete([8, 10, 16, 20, 32]))
 METRIC_ACCURACY = 'accuracy'
 
-with tf.summary.create_file_writer('output/hparam_tuning').as_default():
+with tf.summary.create_file_writer('output/dl_results/hparam_tuning').as_default():
     hp.hparams_config(
         hparams=[HP_EMBEDDING_DIM, HP_NUM_UNITS_1, HP_DROPOUT, HP_NUM_UNITS_2, HP_OPTIMIZER],
         metrics=[hp.Metric(METRIC_ACCURACY, display_name='Accuracy')]
@@ -197,5 +197,5 @@ def dl_grid_search(df):
                             run_name = "run-%d" % session_num
                             print('--- Starting trial: %s' % run_name)
                             print({h.name: hparams[h] for h in hparams})
-                            run('output/hparam_tuning/' + run_name, hparams, df)
+                            run('output/dl_results/hparam_tuning/' + run_name, hparams, df)
                             session_num += 1
