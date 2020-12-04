@@ -169,7 +169,7 @@ def break_down_results_by_category(model_name, indices, Y, predictions, category
         ])
 
         dataframe_indices.append("Class " + str(category) + "(size = " + str(category_sizes[int(category) - 1]) + ")")
-
+    print(results)
     multi_col = pd.MultiIndex.from_tuples([
         (model_name, 'Accuracy'), (model_name, 'Precision'), (model_name, 'Recall'),
         (model_name, 'F1-Score'), (model_name, 'AUC')
@@ -254,6 +254,7 @@ def classical_models(df):
     test_metrics_df = pd.DataFrame.from_dict(metrics)
 
     results_by_category = []
+
     for model_name, model in models.items():
         print("Working on", model_name)
         # k-fold cross validation
