@@ -1,4 +1,0 @@
-,Model,Best Params,Best Score
-0,Logistic Regression,{'C': 2},0.48571428571428565
-1,Decision Tree,{'splitter': 'best'},0.6112244897959184
-2,Random Forest,{'n_estimators': 300},0.6704081632653063

@@ -144,7 +144,7 @@ def extract_features(X):
     # count ngrams in the contents
     mat_ngram, cv_ngram = vectorize_ngrams(X[:, 1])
 
-    X_mat = mat_content #np.hstack((mat_title, mat_content, mat_ngram))
+    X_mat = np.hstack((mat_title, mat_content))
 
     print("The size of the feature space is:", X_mat.shape)
 

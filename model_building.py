@@ -242,11 +242,11 @@ def classical_models(df):
 
     # model
     models = {
-        "Logistic Regression": LogisticRegression(n_jobs=8, solver='lbfgs', C=2),  # no C
+        "Logistic Regression": LogisticRegression(n_jobs=8, solver='lbfgs', C=10),
         "Gaussian NB": GaussianNB(),
-        "Decision Tree": DecisionTreeClassifier(splitter='best'),   # no spliter
-        "Random Forest": RandomForestClassifier(n_estimators=300),  # no estimator
-        "XGBoost": XGBClassifier(n_jobs=8),
+        "Decision Tree": DecisionTreeClassifier(splitter='best'),
+        "Random Forest": RandomForestClassifier(n_estimators=300),
+        "XGBoost": XGBClassifier(n_jobs=8, learning_rate=0.1, max_depth=10, n_estimators=200),
         "SVM": SVC(gamma='auto', kernel='poly', probability=True),
     }
 
@@ -669,7 +669,7 @@ def make_prediction(fit, input_transformers, file_path: str, is_dl: bool):
         mat_title, _ = tfidf_transform(raw_data=sample['Title'], tfidf_vectorizer=tfidf_title)
         mat_content, _ = tfidf_transform(raw_data=sample['Content'], tfidf_vectorizer=tfidf_content)
         mat_ngram, _ = vectorize_ngrams(raw_data=sample['Content'], cv_ngram=cv_ngram)
-        processed_sample = np.hstack((mat_title, mat_content))#, mat_ngram))
+        processed_sample = np.hstack((mat_title, mat_content))
 
     # make prediction
     pred = fit.predict(processed_sample)

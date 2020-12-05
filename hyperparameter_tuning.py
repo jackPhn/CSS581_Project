@@ -56,20 +56,20 @@ def none_dl_grid_search(df):
                 'n_estimators': [50, 100, 200, 300, 400, 500]
             }
         },
-        'SVM': {
-            'model': SVC(gamma='auto', kernel='poly', probability=True),
-            'params': {
-                'C': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                'gamma': ['auto', 'scale'],
-                'kernel': ['rbf', 'poly', 'sigmoid']
-            }
-        },
         'XGBoost': {
             'model': XGBClassifier(n_jobs=8),
             'params': {
                 'n_estimators': [50, 100, 200, 300],
                 'max_depth': [5, 10, 15],
                 'learning_rate': [0.1, 0.2, 0.3]
+            }
+        },
+        'SVM': {
+            'model': SVC(gamma='auto', kernel='poly', probability=True),
+            'params': {
+                'C': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                'gamma': ['auto', 'scale'],
+                'kernel': ['rbf', 'poly', 'sigmoid']
             }
         }
     }

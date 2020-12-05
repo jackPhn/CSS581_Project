@@ -1,0 +1,5 @@
+,Model,Best Params,Best Score
+0,Logistic Regression,{'C': 10},0.5479591836734694
+1,Decision Tree,{'splitter': 'best'},0.5948979591836735
+2,Random Forest,{'n_estimators': 300},0.6979591836734694
+3,XGBoost,"{'learning_rate': 0.1, 'max_depth': 10, 'n_estimators': 200}",0.7010204081632654
