@@ -41,7 +41,7 @@ def none_dl_grid_search(df):
         'Logistic Regression': {
             'model': LogisticRegression(n_jobs=8, solver='lbfgs'),
             'params': {
-                'C': [1, 2, 5, 10]
+                'C': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
             }
         },
         'Decision Tree': {
@@ -53,13 +53,13 @@ def none_dl_grid_search(df):
         'Random Forest': {
             'model': RandomForestClassifier(),
             'params': {
-                'n_estimators': [50, 100, 200, 300]
+                'n_estimators': [50, 100, 200, 300, 400, 500]
             }
         },
         'SVM': {
             'model': SVC(gamma='auto', kernel='poly', probability=True),
             'params': {
-                'C': [1, 2, 5, 10],
+                'C': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                 'gamma': ['auto', 'scale'],
                 'kernel': ['rbf', 'poly', 'sigmoid']
             }

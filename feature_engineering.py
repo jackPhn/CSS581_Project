@@ -144,7 +144,9 @@ def extract_features(X):
     # count ngrams in the contents
     mat_ngram, cv_ngram = vectorize_ngrams(X[:, 1])
 
-    X_mat = np.hstack((mat_title, mat_content, mat_ngram))
+    X_mat = mat_content #np.hstack((mat_title, mat_content, mat_ngram))
+
+    print("The size of the feature space is:", X_mat.shape)
 
     return {
         "cv_ngram": cv_ngram,
@@ -158,7 +160,6 @@ def tokenize_words(raw_data, max_length: int, tokenizer=None):
     """
     Tokenize words
     :param raw_data:    input list of texts
-    :param vocab_size:  size of the vocabulary
     :param max_length:  maximum length of an input sequence
     :param tokenizer:   a trained tokenizer. Create a new one if none
     :return:            list of tokenized input texts and trained tokenizer

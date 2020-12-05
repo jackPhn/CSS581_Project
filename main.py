@@ -192,34 +192,42 @@ def main():
         real_news_contents = np.array(real_news_df['Content'].tolist())
         real_news_joined = " ".join(real_news_contents)
 
-        # Find ngrams
-        real_news_ngram_fred = ngram_frequency(real_news_joined, 3)
+        # Find ngrams frequency
+        real_news_3gram_freq = ngram_frequency(real_news_joined, 3)
         print()
-        print("Frequency of the 20 most common ngrams in real news:")
-        print(real_news_ngram_fred.most_common(20))
+        print("Frequency of the 20 most common 3-grams in real news:")
+        print(real_news_3gram_freq.most_common(20))
+        print()
+        real_news_4gram_freq = ngram_frequency(real_news_joined, 4)
+        print("Frequency of the 20 most common 4-grams in real news:")
+        print(real_news_4gram_freq.most_common(20))
 
         # find frequencies of words
-        real_news_word_fred = word_frequency(real_news_joined)
+        real_news_word_freq = word_frequency(real_news_joined)
         print()
         print("Frequency of the 20 most common words in real news:")
-        print(real_news_word_fred.most_common(20))
+        print(real_news_word_freq.most_common(20))
 
         # ---------------------------------------------------------------------------------------------
         # concatenate all contents of fake news
         fake_news_contents = np.array(fake_news_df['Content'].tolist())
         fake_news_joined = " ".join(fake_news_contents)
 
-        # Find ngrams
-        fake_news_ngram_fred = ngram_frequency(fake_news_joined, 3)
+        # Find ngrams frequency
+        fake_news_3gram_freq = ngram_frequency(fake_news_joined, 3)
         print()
-        print("Frequency of the 20 most common ngrams in fake news:")
-        print(fake_news_ngram_fred.most_common(20))
+        print("Frequency of the 20 most common 3-grams in fake news:")
+        print(fake_news_3gram_freq.most_common(20))
+        fake_news_4gram_freq = ngram_frequency(fake_news_joined, 4)
+        print()
+        print("Frequency of the 20 most common 4-grams in fake news:")
+        print(fake_news_4gram_freq.most_common(20))
 
         # find frequencies of words
-        fake_news_word_fred = word_frequency(fake_news_joined)
+        fake_news_word_freq = word_frequency(fake_news_joined)
         print()
         print("Frequency of the 20 most common words in fake news:")
-        print(fake_news_word_fred.most_common(20))
+        print(fake_news_word_freq.most_common(20))
         print()
 
         # ---------------------------------------------------------------------------------------------

@@ -45,6 +45,8 @@ from data_visualization import(
     visualize_confusion_matrix
 )
 
+from data_compilation import clean_text
+
 from keras_evaluation_metrics import (
     precision_m,
     recall_m,
@@ -169,7 +171,7 @@ def break_down_results_by_category(model_name, indices, Y, predictions, category
         ])
 
         dataframe_indices.append("Class " + str(category) + "(size = " + str(category_sizes[int(category) - 1]) + ")")
-    print(results)
+
     multi_col = pd.MultiIndex.from_tuples([
         (model_name, 'Accuracy'), (model_name, 'Precision'), (model_name, 'Recall'),
         (model_name, 'F1-Score'), (model_name, 'AUC')
@@ -184,7 +186,7 @@ def break_down_results_by_category(model_name, indices, Y, predictions, category
 def display_results(validation_df = None, test_df = None, category_df = None):
     """
     Display the results to console
-    :param validation__df: dataframe of validation results on training set
+    :param validation_df: dataframe of validation results on training set
     :param test_df: dataframe of results on test set
     :param category_df: dataframe of results for individual news categories
     :return: None
@@ -302,7 +304,7 @@ def classical_models(df):
 
     # Write the results to .csv files
     validation_metrics_df.to_csv('output/classical_results/validation_results.csv')
-    test_metrics_df.to_csv('output/classicale_results/test_results.csv')
+    test_metrics_df.to_csv('output/classical_results/test_results.csv')
 
     # save the feature transformers for later use
     with open("output/none_dl_input_transformers.pkl", 'wb') as file:
@@ -644,29 +646,33 @@ def make_prediction(fit, input_transformers, file_path: str, is_dl: bool):
         content_lines = file.read().splitlines()
         content.append(" ".join(content_lines))
 
+    # pack the data into a data frame
+    sample = pd.DataFrame.from_dict({'Title': title, 'Content': content})
+
+    # clean text
+    sample = clean_text(sample, "Content", "Content")
+    sample = clean_text(sample, "Title", "Title")
+
     if is_dl:
         # deep learning model
-        #fit = input_transformers['fit']
         trained_tokenizer = input_transformers['tokenizer']
         vocab_size = input_transformers['vocab_size']
         max_length = input_transformers['max_length']
-        sample, _ = tokenize_words(content, max_length, trained_tokenizer)
+        processed_sample, _ = tokenize_words(sample['Content'], max_length, trained_tokenizer)
     else:
         # classical model
-        #models = input_transformers['models']
-        #fit = models[model_name]
         cv_ngram = input_transformers['cv_ngram']
         tfidf_title = input_transformers['tfidf_title']
         tfidf_content = input_transformers['tfidf_content']
 
         # extract features
-        mat_title, _ = tfidf_transform(raw_data=title, tfidf_vectorizer=tfidf_title)
-        mat_content, _ = tfidf_transform(raw_data=content, tfidf_vectorizer=tfidf_content)
-        mat_ngram, _ = vectorize_ngrams(raw_data=content, cv_ngram=cv_ngram)
-        sample = np.hstack((mat_title, mat_content, mat_ngram))
+        mat_title, _ = tfidf_transform(raw_data=sample['Title'], tfidf_vectorizer=tfidf_title)
+        mat_content, _ = tfidf_transform(raw_data=sample['Content'], tfidf_vectorizer=tfidf_content)
+        mat_ngram, _ = vectorize_ngrams(raw_data=sample['Content'], cv_ngram=cv_ngram)
+        processed_sample = np.hstack((mat_title, mat_content))#, mat_ngram))
 
     # make prediction
-    pred = fit.predict(sample)
+    pred = fit.predict(processed_sample)
 
     # Cutoff threshold is 0.5
     if pred[0] > 0.5:
