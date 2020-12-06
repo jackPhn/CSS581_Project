@@ -25,7 +25,7 @@ def none_dl_grid_search(df):
     """
     Using grid search to find the best model and hyperparameters
     :param df: raw data frame
-    :return:
+    :return: None
     """
     # extract data
     X = df[['Title', 'Content']].values
@@ -101,7 +101,7 @@ def none_dl_grid_search(df):
 HP_EMBEDDING_DIM = hp.HParam('embedding dim', hp.Discrete([8, 16, 32, 64]))
 HP_MAX_LENGTH = hp.HParam('max length', hp.Discrete([200, 300, 1000, 2000, 3000]))
 HP_NUM_UNITS_1 = hp.HParam('num units 1', hp.Discrete([16, 20, 32, 64, 128, 256]))
-HP_DROPOUT = hp.HParam('dropout', hp.RealInterval(0.1, 0.5))
+HP_DROPOUT = hp.HParam('dropout', hp.Discrete([0.1, 0.2, 0.3, 0.4, 0.5]))
 HP_OPTIMIZER = hp.HParam('optimizer', hp.Discrete(['adam', 'sgd', 'RMSprop']))
 HP_NUM_UNITS_2 = hp.HParam('num units 2', hp.Discrete([8, 10, 16, 20, 32]))
 METRIC_ACCURACY = 'accuracy'
@@ -116,9 +116,9 @@ with tf.summary.create_file_writer('output/dl_results/hparam_tuning').as_default
 def train_test_model(df, hparams):
     """
     Helper function for parameter tuning
-    :param df:
-    :param hparams:
-    :return:
+    :param df: input data
+    :param hparams: set of hyperparameter
+    :return: evaluation metric
     """
     # extract data
     X = df[['Title', 'Content']].values
@@ -158,10 +158,10 @@ def train_test_model(df, hparams):
 def run(run_dir, hparams, df):
     """
     Helper function for hyperparameter tuning
-    :param run_dir:
-    :param hparams:
-    :param df:
-    :return:
+    :param run_dir: directory to store results in
+    :param hparams: individual hyperparameter to execute on
+    :param df: input data
+    :return: None
     """
     with tf.summary.create_file_writer(run_dir).as_default():
         hp.hparams(hparams)  # record the values used in this trial
@@ -173,7 +173,7 @@ def dl_grid_search(df):
     """
     Tune hyperparameters to select deep learning model
     :param df: input data frame containing raw data
-    :return:
+    :return: None
     """
     session_num = 0
 

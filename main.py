@@ -260,7 +260,7 @@ def main():
         predict_single_case()
 
         # ask if the user wants to execute again
-        is_end = input("Do you want to continue? (Y or N)").lower()
+        is_end = input("Do you want to execute again? (Y or N)").lower()
         if is_end == 'n':
             run_again = False
 
