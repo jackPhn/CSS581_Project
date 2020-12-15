@@ -106,7 +106,7 @@ def predict_single_case():
                 model = pickle.load(infile)
 
             # load the feature transformers
-            none_dl_transformers_fname = 'none_dl_input_transformers.pkl'
+            none_dl_transformers_fname = 'classical_input_transformers.pkl'
             with open(os.path.join(cwd, "output/" + none_dl_transformers_fname), 'rb') as infile:
                 cv_ngram, tfidf_content, tfidf_title = pickle.load(infile)
             input_transformers = {'cv_ngram': cv_ngram, 'tfidf_content': tfidf_content, 'tfidf_title': tfidf_title}
