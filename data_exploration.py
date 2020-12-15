@@ -12,9 +12,6 @@ def validate_null_value(news_df):
     :param news_df: input dataframe
     :return: None
     """
-    print(tabulate(news_df.head(5), headers='keys', tablefmt='psql'))
-    print(news_df.shape)
-
     # check for a column with any null value
     print("List the count of null values for each column")
     sum_null_value = news_df.isnull().sum()
@@ -29,21 +26,6 @@ def validate_null_value(news_df):
     print("Is there any null value? " + str(is_null))
 
 
-def validate_unique_record(news_df):
-    """
-    Check unique values in the label
-    :param news_df: Input dataframe
-    :return: None
-    """
-    # Find the unique value of is_fake column
-    print("Display the unique Values of is_fake")
-    print(news_df.is_fake.unique())
-
-    # Find the unique value of is_news column
-    print("Display the unique Values of is_news")
-    print(news_df.is_news.unique())
-
-
 def word_frequency(text: str):
     """
     Get frequency of individual words in a text corpus
@@ -56,7 +38,6 @@ def word_frequency(text: str):
 
     # count the frequency
     word_counter = collections.Counter(tokenized)
-    #frequencies = list(collections.Counter(tokenized).items())
 
     return word_counter
 
@@ -79,6 +60,27 @@ def ngram_frequency(text: str, n: int = 2):
     ngram_counter = collections.Counter(ngram_list)
 
     return ngram_counter
+
+
+def count_unique_words(sequences):
+    """
+    Count the number of unique words in a list of text sequences
+    :param sequences: list of text sequences
+    :return: number of unique words
+    """
+    joined_sequence = " ".join(sequences).lower()
+    unique_words = list(word_frequency(joined_sequence).keys())
+    return unique_words
+
+
+def find_longest_sequence_length(sequences):
+    """
+    Find the length of the longest sequence
+    :param sequences: list of text sequences
+    :return: the length of the longest sequence
+    """
+    max_length = np.max([len(sequence) for sequence in sequences])
+    return max_length
 
 
 def visualize_composition(df):

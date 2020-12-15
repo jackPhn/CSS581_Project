@@ -26,23 +26,12 @@ from xgboost import XGBClassifier
 
 import tensorflow as tf
 from keras.utils import plot_model
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from keras.models import Sequential
-from tensorflow.keras.layers import Embedding, Bidirectional, Dense, LSTM, Dropout, GRU
-from keras.optimizers import Adam
 
 from feature_engineering import (
     tfidf_transform,
     vectorize_ngrams,
     extract_features,
     tokenize_words,
-    process_feature_engineering,
-    normalize
-)
-
-from data_visualization import(
-    visualize_confusion_matrix
 )
 
 from data_compilation import clean_text
@@ -52,7 +41,6 @@ from keras_evaluation_metrics import (
     recall_m,
     f1_m
 )
-from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
 
 
 def evaluate(fit, X_test, Y_test, is_dl: bool = False):
@@ -64,6 +52,7 @@ def evaluate(fit, X_test, Y_test, is_dl: bool = False):
     :param is_dl: whether the input model is deep learning
     :return: a dictionary of metrics
     """
+    # make predictions
     predictions = np.array(fit.predict(X_test))
 
     # deal with deep learning model
@@ -242,12 +231,12 @@ def classical_models(df):
 
     # model
     models = {
-        "Logistic Regression": LogisticRegression(n_jobs=8, solver='lbfgs', C=10),
+        "Logistic Regression": LogisticRegression(n_jobs=8, C=10),
         "Gaussian NB": GaussianNB(),
         "Decision Tree": DecisionTreeClassifier(splitter='best'),
         "Random Forest": RandomForestClassifier(n_estimators=300),
         "XGBoost": XGBClassifier(n_jobs=8, learning_rate=0.1, max_depth=10, n_estimators=200),
-        "SVM": SVC(gamma='auto', kernel='poly', probability=True),
+        "SVM": SVC(probability=True),
     }
 
     # create a data frame to store validation metrics and test metrics
@@ -297,17 +286,17 @@ def classical_models(df):
     results_by_category_df = results_by_category[0]
     for i in range(1, len(results_by_category)):
         results_by_category_df = results_by_category_df.join(results_by_category[i])
-    results_by_category_df.to_csv('output/classical_results/none_dl_results_by_category.csv')
+    results_by_category_df.to_csv('output/classical_results/classical_results_by_category.csv')
 
     # display the results
     display_results(validation_metrics_df, test_metrics_df, results_by_category_df)
 
     # Write the results to .csv files
-    validation_metrics_df.to_csv('output/classical_results/validation_results.csv')
-    test_metrics_df.to_csv('output/classical_results/test_results.csv')
+    validation_metrics_df.to_csv('output/classical_results/classical_validation_results.csv')
+    test_metrics_df.to_csv('output/classical_results/classical_test_results.csv')
 
     # save the feature transformers for later use
-    with open("output/none_dl_input_transformers.pkl", 'wb') as file:
+    with open("output/classical_input_transformers.pkl", 'wb') as file:
         pickle.dump((feature_pack['cv_ngram'], feature_pack['tfidf_content'], feature_pack['tfidf_title']), file)
 
     return {
@@ -390,14 +379,14 @@ def build_nn_model(vocab_size, embedding_dim, max_length):
     return tf.keras.Sequential([
         tf.keras.layers.Embedding(vocab_size + 1, embedding_dim, input_length=max_length),
         tf.keras.layers.GlobalAveragePooling1D(),
-        tf.keras.layers.Dense(256, activation='relu'),
-        tf.keras.layers.Dropout(0.5),
-        tf.keras.layers.Dense(4, activation='relu'),
+        tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dense(32, activation='relu'),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
 
 
-def build_lstm_model2(vocab_size, embedding_dim, max_length):
+def build_lstm_model(vocab_size, embedding_dim, max_length):
     """
     Construct a LSTM model with word embedding
     :param vocab_size: size of the vocabulary
@@ -455,7 +444,8 @@ def build_bidirectional_lstm_model(vocab_size, embedding_dim, max_length):
         tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(64, return_sequences=True)),
         tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32)),
         tf.keras.layers.Dense(64, activation='relu'),
-        tf.keras.layers.Dropout(0.5),tf.keras.layers.Dense(1, activation='sigmoid')
+        tf.keras.layers.Dropout(0.1),
+        tf.keras.layers.Dense(1, activation='sigmoid')
     ])
 
 
@@ -473,18 +463,20 @@ def build_combined_cnn_lstm_model(vocab_size, embedding_dim, max_length):
         tf.keras.layers.MaxPool1D(4),
         tf.keras.layers.Dropout(0.2),
         tf.keras.layers.LSTM(100),
+        tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
 
 
 def deep_learning_model(df):
     """
-    Build a deep learning model
+    Build deep learning models
     :param df: input data frame containing raw data
     :return: trained neural network
     """
-    embedding_dim = 32
-    max_length = 200 #np.max([len(news) for news in df['Content'].tolist()])
+    embedding_dim = 64
+    max_length = 1000
 
     # extract data
     X = df[['Title', 'Content']].values
@@ -523,10 +515,10 @@ def deep_learning_model(df):
     # construct models
     models = {
         'Neural_Network': build_nn_model(vocab_size, embedding_dim, max_length),
-        'LSTM': build_lstm_model2(vocab_size, embedding_dim, max_length),
+        'LSTM': build_lstm_model(vocab_size, embedding_dim, max_length),
         'GRU': build_gru_model(vocab_size, embedding_dim, max_length),
         'Bidirectional_LSTM': build_bidirectional_lstm_model(vocab_size, embedding_dim, max_length),
-        'Combined_CNN_LSTM': build_combined_cnn_lstm_model(vocab_size, embedding_dim, max_length)
+        'Hybrid_CNN_LSTM': build_combined_cnn_lstm_model(vocab_size, embedding_dim, max_length)
     }
 
     # create a data frame to store test metrics
@@ -534,8 +526,8 @@ def deep_learning_model(df):
     test_metrics_df = pd.DataFrame.from_dict(metrics)
 
     # create training callbacks
-    early_stop_cb = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=3)
-    reduce_lr_cb = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=10, min_lr=0.001)
+    early_stop_cb = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=3, mode='max')
+    reduce_lr_cb = tf.keras.callbacks.ReduceLROnPlateau(monitor='loss', factor=0.2, patience=10, min_lr=0.001)
 
     # define the number of training epochs
     num_epoch = 1000
@@ -549,12 +541,12 @@ def deep_learning_model(df):
         print("Working on", model_name)
 
         # save the model architecture to png file
-        architecture_fname = 'output/dl_results/' + model_name + "architecture.png"
+        architecture_fname = 'output/dl_results/' + model_name + "_architecture.png"
         plot_model(model, to_file=architecture_fname)
 
         # compile the model
         # model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', precision_m, recall_m, f1_m])
-        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+        model.compile(loss='binary_crossentropy', optimizer='RMSprop', metrics=['accuracy'])
 
         # train the model
         history = model.fit(X_train[:, 0:X_train.shape[1] - 1], Y_train,
@@ -679,131 +671,3 @@ def make_prediction(fit, input_transformers, file_path: str, is_dl: bool):
         print("This is fake news. Consume with caution.")
     else:
         print("This is legitimate news. Read away.")
-
-
-def create_pad_sequence(df, total_words, maxlen):
-    MAX_SEQUENCE_LENGTH = 300
-    MAX_VOCAB = 10000
-    x_train, x_test, y_train, y_test = train_test_split(df.clean_joined, df.is_fake, test_size=0.2)
-    tokenizer = Tokenizer(num_words=total_words)
-
-    # update internal vocabulary based on a list of tests
-    tokenizer.fit_on_texts(x_train)
-
-    # transformation each text into a sequences integer
-    train_sequences = tokenizer.texts_to_sequences(x_train)
-    test_sequences = tokenizer.texts_to_sequences(x_test)
-    padded_train = pad_sequences(train_sequences, maxlen=MAX_SEQUENCE_LENGTH, padding='post', truncating='post')
-    padded_test = pad_sequences(test_sequences, maxlen=MAX_SEQUENCE_LENGTH, padding='post', truncating='post')
-    return padded_train, padded_test, y_train, y_test
-
-
-def build_lstm_model(padded_train, padded_test, total_words, y_train, y_test):
-    # dictionary for storing weights
-    trained_models = dict()
-
-    sent_leng = 300
-    # # create sequential model
-    model = Sequential()
-
-    # embedding layer
-    model.add(Embedding(total_words, output_dim=100, input_length=sent_leng))
-
-    # Bi-directional RNN/LSTM
-    model.add(Bidirectional(LSTM(100)))
-
-    # Dense layers
-    model.add(Dense(64, activation='relu'))
-    model.add(Dropout(0.3))
-    # model.add(Dense(512)),
-    # model.add(Dropout(0.3)),
-    # model.add(Dense(256)),
-    model.add(Dense(1, activation='sigmoid'))
-
-    model.compile(optimizer= 'adam', loss='binary_crossentropy', metrics=['accuracy'])
-    model.summary()
-    # cp = ModelCheckpoint('model_Rnn.hdf5', monitor='val_acc', verbose=1, save_best_only=True)
-    y_train = np.asarray(y_train)
-
-    early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=2, restore_best_weights=True)
-    # model.compile(loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
-    #               optimizer=tf.keras.optimizers.Adam(1e-4),
-    #               metrics=['accuracy'])
-    #
-    # history = model.fit(padded_train, y_train, batch_size=60, epochs=10, validation_split=0.2, shuffle=False, callbacks=[early_stop])
-    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.9, patience=5, min_lr=0.0000001, verbose=1)
-
-    # def coeff_determination(y_true, y_pred):
-    #     from keras import backend as K
-    #     SS_res = K.sum(K.square(y_true - y_pred))
-    #     SS_tot = K.sum(K.square(y_true - K.mean(y_true)))
-    #     return (1 - SS_res / (SS_tot + K.epsilon()))
-    #
-    # model.compile(loss='mse',
-    #               optimizer='nadam',
-    #               metrics=[coeff_determination, 'mse', 'mae', 'mape'])
-
-    history = model.fit(padded_train, y_train, validation_data=(padded_test, y_test), epochs=10, batch_size=60, shuffle=False, verbose=1, callbacks=[reduce_lr])
-    trained_models['lstm'] = history.history
-
-    # Write the results to .csv files
-    # trained_models.to_csv('output/lstm_train_results.csv')
-
-    # visualize the training history
-    visualize_dl_training(history)
-
-    return model
-
-
-def predict_lstm_model(model, padded_test, y_test):
-    # create a data frame to store validation metrics and test metrics
-    metrics = {"Metrics": ['Accuracy', 'Precision', 'Recall', 'F1-Score', 'AUC']}
-    test_metrics_df = pd.DataFrame.from_dict(metrics)
-    test_metrics_df = pd.DataFrame.from_dict(metrics)
-
-    pred = model.predict(padded_test)
-    prediction = []
-    # if the predicted value is > 0.5 it is real else it is fake
-    for i in range(len(pred)):
-        if pred[i] > 0.5:
-            prediction.append(1)
-        else:
-            prediction.append(0)
-
-    # getting the measurement
-    accuracy = accuracy_score(y_test, prediction)
-    precision = precision_score(y_test, prediction)
-    recall = recall_score(y_test, prediction)
-    f1score = f1_score(y_test, prediction)
-    auc = roc_auc_score(y_test, prediction)
-
-    # pack the results into a data frame
-    values = {
-        "Value": [accuracy,
-                  precision,
-                  recall,
-                  f1score,
-                  auc]
-    }
-    test_metrics = pd.DataFrame.from_dict(values)
-    test_metrics_df['lstm'] = test_metrics["Value"]
-
-    # Write the results to .csv files
-    test_metrics_df.to_csv('output/lstm_test_results.csv')
-
-    print("LSTM Model Accuracy: ", accuracy)
-    print("LSTM Model Precision: ", precision)
-    print("LSTM Model Recall: ", recall)
-    print("LSTM Model F1_score: ", f1score)
-    print("LSTM Model AUC: ", auc)
-
-    return prediction
-
-def create_lstm_predictive_model(df):
-    df_clean, stop_words, total_words, token_maxlen = process_feature_engineering(df)
-    # visualize_fake_word_cloud_plot(df_clean, stop_words)
-    # visualize_ligit_word_cloud_plot(df_clean, stop_words)
-    padded_train, padded_test, y_train, y_test = create_pad_sequence(df_clean, total_words, token_maxlen)
-    model = build_lstm_model(padded_train, padded_test, total_words, y_train, y_test)
-    prediction = predict_lstm_model(model, padded_test, y_test)
-    visualize_confusion_matrix(prediction, y_test)

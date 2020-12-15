@@ -3,46 +3,31 @@ import pandas as pd
 import os
 import pickle
 import tensorflow as tf
+from tabulate import tabulate
 
 from data_compilation import (
     build_real_news_dataframe,
     build_fake_news_dataframe,
-    clean_text
+    clean_text,
+    remove_stop_words
 )
 
 from data_exploration import (
     validate_null_value,
-    validate_unique_record,
     ngram_frequency,
     word_frequency,
-    visualize_composition
+    visualize_composition,
+    count_unique_words,
+    find_longest_sequence_length
 )
 from model_building import (
     classical_models,
     make_prediction,
     deep_learning_model,
-    create_pad_sequence,
-    predict_lstm_model,
-    build_lstm_model,
-    create_lstm_predictive_model
 )
 from hyperparameter_tuning import (
     none_dl_grid_search,
     dl_grid_search
-)
-
-from data_visualization import (
-    visualize_real_fake,
-    visualize_news_celebrity,
-    visualize_fake_word_cloud_plot,
-    visulaize_fake_legit,
-    visualize_legit_word_cloud_plot,
-    visualize_word_distribution,
-    visualize_confusion_matrix,
-)
-
-from feature_engineering import(
-    process_feature_engineering
 )
 
 
@@ -76,7 +61,7 @@ def build_validate_and_tune(news_df):
 
         if is_dl == 'n':
             # using grid search to find the best parameters for several classical models
-            print("Performing grid search for non-deep-learning models")
+            print("Performing grid search for classical machine learning models")
             none_dl_grid_search(news_df)
 
         else:
@@ -163,33 +148,80 @@ def main():
     real_news_df = build_real_news_dataframe(include_celeb=True)
     fake_news_df = build_fake_news_dataframe(include_celeb=True)
     news_df = pd.concat([real_news_df, fake_news_df])
+
     # Clean the data by removing punctuation
-    news_df = clean_text(news_df, "Content", "Content")
-    news_df = clean_text(news_df, "Title", "Title")
+    processed_real_news_df = clean_text(real_news_df, 'Content', 'Content')
+    processed_real_news_df = clean_text(real_news_df, 'Title', 'Title')
+    processed_fake_news_df = clean_text(fake_news_df, 'Content', 'Content')
+    processed_fake_news_df = clean_text(fake_news_df, 'Title', 'Title')
+
+    # join the process dataframe
+    processed_news_df = pd.concat([processed_real_news_df, processed_fake_news_df])
+
+    # remove stop words from the titles
+    processed_news_df = remove_stop_words(processed_news_df, 'Title')
+    processed_news_df = remove_stop_words(processed_news_df, 'Content')
 
     # -------------------------------------------------------------------------------------------------
     # Data exploration
     response = input("Do you want to perform data exploration? Enter (Y)es or (N)o").lower()
     if response == 'y':
-        # find the longest news content
-        max_content_length = np.max([len(news) for news in news_df['Content'].tolist()])
-        print("The number of words in the longest piece of news is:", max_content_length)
-        print()
-
-        # find out the total number of unique words in the corpus
-        news_contents = np.array(news_df['Content'].tolist())
-        news_df_joined = " ".join(news_contents).lower()
-        unique_words = list(word_frequency(news_df_joined).keys())
-        print("The number of unique words in the news contents is:", len(unique_words))
-        print()
+        # display the dataset
+        print(tabulate(processed_news_df.head(5), headers='keys', tablefmt='psql'))
+        print(processed_news_df.shape)
 
         # find missing values
         validate_null_value(news_df)
-        validate_unique_record(news_df)
+
+        # ---------------------------------------------------------------------------------------------
+        # explore the data preprocessing
+        # find the longest news content
+        print("Attributes preprocessing:")
+        max_content_length = find_longest_sequence_length(news_df['Content'].tolist())
+        print("The number of words in the longest piece of news is:", max_content_length)
+        print()
+
+        # find out the total number of unique words in the news contents
+        content_num_unique_words = count_unique_words(news_df['Content'].tolist())
+        print("The number of unique words in the news contents is:", len(content_num_unique_words))
+        print()
+
+        # find the longest headline
+        max_headline_length = find_longest_sequence_length(news_df['Title'].tolist())
+        print("The number of words in the longest headline is:", max_headline_length)
+        print()
+
+        # find out the total number of unique words in the headlines
+        headline_num_unique_words = count_unique_words(news_df['Title'].tolist())
+        print("The number of unique words in the news headlines is:", len(headline_num_unique_words))
+        print()
+
+        # ---------------------------------------------------------------------------------------------
+        # explore the data postprocessing
+        print("Attributes postprocessing:")
+        # find the longest news content
+        max_content_length = find_longest_sequence_length(processed_news_df['Processed Content'].tolist())
+        print("The number of words in the longest piece of news is:", max_content_length)
+        print()
+
+        # find out the total number of unique words in the news contents
+        content_num_unique_words = count_unique_words(processed_news_df['Processed Content'].tolist())
+        print("The number of unique words in the news contents is:", len(content_num_unique_words))
+        print()
+
+        # find the longest headline
+        max_headline_length = find_longest_sequence_length(processed_news_df['Processed Title'].tolist())
+        print("The number of words in the longest headline is:", max_headline_length)
+        print()
+
+        # find out the total number of unique words in the headlines
+        headline_num_unique_words = count_unique_words(processed_news_df['Processed Title'].tolist())
+        print("The number of unique words in the news headlines is:", len(headline_num_unique_words))
+        print()
 
         # ---------------------------------------------------------------------------------------------
         # concatenate all contents of real news
-        real_news_contents = np.array(real_news_df['Content'].tolist())
+        real_news_contents = np.array(processed_real_news_df['Content'].tolist())
         real_news_joined = " ".join(real_news_contents)
 
         # Find ngrams frequency
@@ -210,7 +242,7 @@ def main():
 
         # ---------------------------------------------------------------------------------------------
         # concatenate all contents of fake news
-        fake_news_contents = np.array(fake_news_df['Content'].tolist())
+        fake_news_contents = np.array(processed_fake_news_df['Content'].tolist())
         fake_news_joined = " ".join(fake_news_contents)
 
         # Find ngrams frequency
@@ -234,27 +266,16 @@ def main():
         # Data visualization
         visualize_composition(news_df)
 
-
-        # ---------------------------------------------------------------------------------------------
-        # Visualization
-        #visualize_real_fake(news_df)
-        #visualize_news_celebrity(news_df)
-        #visulaize_fake_legit(news_df)
-
-
-    # LSTM and RNN
-    # create_lstm_predictive_model(news_df)
-
     # -------------------------------------------------------------------------------------------------
     # shuffle the dataset
-    news_df = news_df.sample(frac=1, random_state=1).reset_index(drop=True)
+    processed_news_df = processed_news_df.sample(frac=1, random_state=1).reset_index(drop=True)
 
     # start execution loop
     run_again = True
     while run_again:
 
         # build models, validate, and tune hyperparameters
-        build_validate_and_tune(news_df)
+        build_validate_and_tune(processed_news_df)
 
         # make a prediction on a news article
         predict_single_case()

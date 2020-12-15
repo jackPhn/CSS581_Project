@@ -65,7 +65,7 @@ def none_dl_grid_search(df):
             }
         },
         'SVM': {
-            'model': SVC(gamma='auto', kernel='poly', probability=True),
+            'model': SVC(probability=True),
             'params': {
                 'C': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                 'gamma': ['auto', 'scale'],
@@ -94,21 +94,21 @@ def none_dl_grid_search(df):
     print(scores)
     print(resultsDF)
     # save the results
-    resultsDF.to_csv('output/classical_results/none_dl_grid_search_results.csv')
+    resultsDF.to_csv('output/classical_results/classical_grid_search_results.csv')
 
 
 # setup hyperparameter experiment
-HP_EMBEDDING_DIM = hp.HParam('embedding dim', hp.Discrete([8, 16, 32, 64]))
-HP_MAX_LENGTH = hp.HParam('max length', hp.Discrete([200, 300, 1000, 2000, 3000]))
-HP_NUM_UNITS_1 = hp.HParam('num units 1', hp.Discrete([16, 20, 32, 64, 128, 256]))
+HP_EMBEDDING_DIM = hp.HParam('embedding dim', hp.Discrete([16, 32, 64]))
+HP_MAX_LENGTH = hp.HParam('max length', hp.Discrete([200, 300, 400, 500, 1000, 2000]))
+HP_NUM_UNITS_1 = hp.HParam('num units 1', hp.Discrete([64, 128, 256]))
 HP_DROPOUT = hp.HParam('dropout', hp.Discrete([0.1, 0.2, 0.3, 0.4, 0.5]))
 HP_OPTIMIZER = hp.HParam('optimizer', hp.Discrete(['adam', 'sgd', 'RMSprop']))
-HP_NUM_UNITS_2 = hp.HParam('num units 2', hp.Discrete([8, 10, 16, 20, 32]))
+HP_NUM_UNITS_2 = hp.HParam('num units 2', hp.Discrete([8, 10, 16, 32]))
 METRIC_ACCURACY = 'accuracy'
 
 with tf.summary.create_file_writer('output/dl_results/hparam_tuning').as_default():
     hp.hparams_config(
-        hparams=[HP_EMBEDDING_DIM, HP_NUM_UNITS_1, HP_DROPOUT, HP_NUM_UNITS_2, HP_OPTIMIZER],
+        hparams=[HP_EMBEDDING_DIM, HP_MAX_LENGTH, HP_NUM_UNITS_1, HP_DROPOUT, HP_NUM_UNITS_2, HP_OPTIMIZER],
         metrics=[hp.Metric(METRIC_ACCURACY, display_name='Accuracy')]
     )
 
@@ -132,7 +132,7 @@ def train_test_model(df, hparams):
     vocab_size = len(trained_tokenizer.word_index)
 
     # split the dataset
-    X_train, X_test, Y_train, Y_test = train_test_split(features, labels, test_size=0.2, random_state=42, stratify=labels)
+    X_train, X_test, Y_train, Y_test = train_test_split(features, labels, test_size=0.2, random_state=0, stratify=labels)
 
     # the model to tune for
     model = tf.keras.Sequential([
@@ -180,7 +180,7 @@ def dl_grid_search(df):
     for embedding_dim in HP_EMBEDDING_DIM.domain.values:
         for max_length in HP_MAX_LENGTH.domain.values:
             for num_units_1 in HP_NUM_UNITS_1.domain.values:
-                for dropout_rate in (HP_DROPOUT.domain.min_value, HP_DROPOUT.domain.max_value):
+                for dropout_rate in HP_DROPOUT.domain.values:
                     for num_units_2 in HP_NUM_UNITS_2.domain.values:
                         for optimizer in HP_OPTIMIZER.domain.values:
                             hparams = {

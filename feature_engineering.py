@@ -1,96 +1,11 @@
-import nltk
-#nltk.download('stopwords')
-from nltk.corpus import stopwords
-import gensim
 import pandas as pd
 import numpy as np
-from tabulate import tabulate
-
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.feature_extraction.text import (
     CountVectorizer,
     TfidfVectorizer
 )
-import re
-
-stop_words = []
-
-def process_feature_engineering(df):
-    df_original = combine_two_columns(df, 'Title', 'Content', 'original')
-    df_clean, stop_words = remove_stop_words(df_original)
-    total_words = find_total_words(df_clean)
-    maxlen = find_max_token_length(df_clean)
-    return df_clean, stop_words, total_words, maxlen
-
-
-def combine_two_columns(df, first_column, second_column, new_column):
-    '''
-    :param df: dataframe
-    :param first_column: first column to be combined
-    :param second_column: seconed column to be combined
-    :param new_column: the new column to be named
-    :return: copy of the new data fram
-    '''
-    df_original = df.copy()
-    df_original[new_column] = df_original[first_column].astype(str) + ' ' + df[second_column]
-
-    return df_original
-
-
-def remove_stop_words(df):
-    '''
-    :param df:dataframe
-    :return:new datafream and stop_words
-    '''
-    stop_words = stopwords.words('english')
-    stop_words.extend(['her', 'to', 'for', 'with', 'and'])
-    df['clean'] = df['original'].apply(preprocess_stop_word)
-    df['clean_joined'] = df['clean'].apply(lambda x: " ".join(x))
-    print(tabulate(df.head(5), headers='keys', tablefmt='psql'))
-    print(df.shape)
-    return df, stop_words
-
-
-# find the total list of words excluding stop words and redundent words
-def find_total_words(df):
-    '''
-    :param df: dataframe
-    :return: list of words
-    '''
-    list_of_words = []
-    for i in df.clean:
-        for j in i:
-            list_of_words.append(j)
-    total_words = len(list(set(list_of_words)))
-    return total_words
-
-
-def preprocess_stop_word(text):
-    '''
-    :param text: text to be processed
-    :param stop_words: list of stop words
-    :return: return the processed text
-    '''
-    result = []
-    for token in gensim.utils.simple_preprocess(text):
-        if token not in gensim.parsing.preprocessing.STOPWORDS and len(token) > 3 and token not in stop_words:
-            result.append(token)
-    return result
-
-
-# find the max lengeth of a token
-def find_max_token_length(df):
-    '''
-    :param df:
-    :return:
-    '''
-    maxlen = -1
-    for doc in df.clean_joined:
-        tokens = nltk.wordpunct_tokenize(doc)
-        if(maxlen < len(tokens)):
-            maxlen = len(tokens)
-    return  maxlen
 
 
 def tfidf_transform(raw_data, tfidf_vectorizer=None):
@@ -120,7 +35,7 @@ def vectorize_ngrams(raw_data, cv_ngram=None):
     if cv_ngram is None:
         # count vectorizer
         # convert all words to lower case letters
-        cv_ngram = CountVectorizer(analyzer='word', ngram_range=(3, 3), lowercase=True)
+        cv_ngram = CountVectorizer(analyzer='word', ngram_range=(4, 4), lowercase=True)
         # convert the input text data to a matrix of token counts
         mat = cv_ngram.fit_transform(raw_data).todense()
     else:
@@ -177,19 +92,3 @@ def tokenize_words(raw_data, max_length: int, tokenizer=None):
     padded = pad_sequences(sequences, maxlen=max_length, padding=padding_type, truncating=trunc_type)
 
     return padded, tokenizer
-
-
-def normalize(data):
-    normalized = []
-    for i in data:
-        i = i.lower()
-        # get rid of urls
-        i = re.sub('https?://\S+|www\.\S+', '', i)
-        # get rid of non words and extra spaces
-        i = re.sub('\\W', ' ', i)
-        i = re.sub('\n', '', i)
-        i = re.sub(' +', ' ', i)
-        i = re.sub('^ ', '', i)
-        i = re.sub(' $', '', i)
-        normalized.append(i)
-    return normalized
